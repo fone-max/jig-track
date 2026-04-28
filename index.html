@@ -751,21 +751,69 @@ window.renderTable = function() {
     const matchQ = !q || (j.id||'').toLowerCase().includes(q) || (j.name||'').toLowerCase().includes(q) || (j.model||'').toLowerCase().includes(q) || (j.customer||'').toLowerCase().includes(q);
     return matchQ && (!fs||j.status===fs) && (!ft||j.type===ft) && (!fc||j.customer===fc);
   });
-  document.getElementById('jig-tbody').innerHTML = filtered.length ? filtered.map(j=>`
-    <tr>
-      <td><span class="jig-id">${j.id}</span></td>
-      <td>${j.name}<br><span style="font-size:11px;color:var(--text3)">${j.model||''}</span></td>
-      <td style="font-size:12px;color:var(--text2);">${j.customer||'—'}</td>
-      <td><span class="badge badge-blue">${j.type||''}</span></td>
-      <td><span class="loc-tag">${j.loc||'—'}</span></td>
-      <td>${statusBadge(j.status)}</td>
-      <td style="color:var(--text2);font-size:12px">${j.holder||'—'}</td>
-      <td style="white-space:nowrap;display:flex;gap:6px;">
-        <button class="btn-sm" onclick="openDetail('${j.id}')">ดู / QR</button>
-        <button class="btn-sm" onclick="openCO('${j.id}')">${j.status==='ถูกยืม'?'คืน':'ยืม'}</button>
-        <button class="btn-delete" onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}')">ลบ</button>
-      </td>
-    </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">ไม่พบ Jig</td></tr>';
+
+  const isMobile = window.innerWidth < 700;
+  const sColor={'พร้อมใช้':'#00b894','ถูกยืม':'#e17055','รอซ่อม':'#d63031','เลิกใช้':'#b2bec3'};
+  const sBg={'พร้อมใช้':'#e0f5ef','ถูกยืม':'#fff0eb','รอซ่อม':'#ffeaea','เลิกใช้':'#f5f6f8'};
+  const sIcon={'พร้อมใช้':'✅','ถูกยืม':'🔶','รอซ่อม':'🔧','เลิกใช้':'⛔'};
+
+  if(isMobile) {
+    // Mobile: Card layout
+    const container = document.getElementById('jig-tbody');
+    container.closest('table').style.display = 'none';
+    let cardWrap = document.getElementById('jig-card-list');
+    if(!cardWrap) {
+      cardWrap = document.createElement('div');
+      cardWrap.id = 'jig-card-list';
+      cardWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+      container.closest('.table-wrap').after(cardWrap);
+    }
+    cardWrap.style.display = 'flex';
+    cardWrap.innerHTML = filtered.length ? filtered.map(j=>`
+      <div style="background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:stretch;">
+          <!-- Thumb -->
+          <div style="width:80px;flex-shrink:0;background:#f4f6f9;display:flex;align-items:center;justify-content:center;font-size:28px;color:#b2bec3;min-height:80px;">
+            ${j.imageData?`<img src="${j.imageData}" style="width:80px;height:80px;object-fit:cover;">`:'🔧'}
+          </div>
+          <!-- Info -->
+          <div style="flex:1;padding:10px 12px;min-width:0;" onclick="openDetail('${j.id}')">
+            <div style="font-family:var(--mono);font-size:11px;color:#00b894;font-weight:700;">${j.id}</div>
+            <div style="font-size:14px;font-weight:700;color:#2d3436;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.name}</div>
+            <div style="font-size:11px;color:#b2bec3;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.model||''} ${j.customer?`· ${j.customer}`:''}</div>
+            <div style="font-size:12px;color:#636e72;margin-bottom:5px;">📍 ${j.loc||'ไม่ระบุ'}</div>
+            <span style="background:${sBg[j.status]||'#f5f6f8'};color:${sColor[j.status]||'#b2bec3'};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${sIcon[j.status]||''} ${j.status}</span>
+            ${j.holder?`<span style="font-size:11px;color:#b2bec3;margin-left:6px;">👤 ${j.holder}</span>`:''}
+          </div>
+        </div>
+        <!-- Action buttons -->
+        <div style="display:flex;border-top:1px solid rgba(0,0,0,0.06);">
+          <button onclick="openDetail('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#0984e3;cursor:pointer;">🔍 ดู / QR</button>
+          <button onclick="openCO('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#00b894;cursor:pointer;">${j.status==='ถูกยืม'?'↩️ คืน':'📤 ยืม'}</button>
+          <button onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}') " style="flex:0.6;padding:10px;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:#d63031;cursor:pointer;">🗑️</button>
+        </div>
+      </div>`).join('') : '<div style="text-align:center;padding:40px;color:#b2bec3;">ไม่พบ Jig</div>';
+  } else {
+    // Desktop: Table layout
+    const cardWrap = document.getElementById('jig-card-list');
+    if(cardWrap) cardWrap.style.display = 'none';
+    document.getElementById('jig-tbody').closest('table').style.display = '';
+    document.getElementById('jig-tbody').innerHTML = filtered.length ? filtered.map(j=>`
+      <tr>
+        <td><span class="jig-id">${j.id}</span></td>
+        <td>${j.name}<br><span style="font-size:11px;color:var(--text3)">${j.model||''}</span></td>
+        <td style="font-size:12px;color:var(--text2);">${j.customer||'—'}</td>
+        <td><span class="badge badge-blue">${j.type||''}</span></td>
+        <td><span class="loc-tag">${j.loc||'—'}</span></td>
+        <td>${statusBadge(j.status)}</td>
+        <td style="color:var(--text2);font-size:12px">${j.holder||'—'}</td>
+        <td style="white-space:nowrap;display:flex;gap:6px;">
+          <button class="btn-sm" onclick="openDetail('${j.id}')">ดู / QR</button>
+          <button class="btn-sm" onclick="openCO('${j.id}')">${j.status==='ถูกยืม'?'คืน':'ยืม'}</button>
+          <button class="btn-delete" onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}')">ลบ</button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">ไม่พบ Jig</td></tr>';
+  }
 }
 
 window.renderQuickList = function() {
