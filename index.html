@@ -478,7 +478,8 @@ tr:hover td { background: #f8fffe; }
       <!-- รูปภาพ + สถานะ banner -->
       <div style="position:relative;margin-bottom:14px;">
         <div id="md-img-section" style="display:none;">
-          <img id="md-img" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);">
+          <img id="md-img" onclick="openFullImg(this.src)" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:zoom-in;" title="แตะเพื่อดูรูปเต็ม">
+          <div style="text-align:center;margin-top:4px;font-size:10px;color:var(--text3);">👆 แตะรูปเพื่อดูแบบเต็ม</div>
         </div>
         <div id="md-no-img" style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);" onclick="requirePin(()=>document.getElementById('f-img-add').click())">
           📷 คลิกเพื่อเพิ่มรูปภาพ Jig
@@ -629,6 +630,13 @@ W-008, Jig Welding CTC, 1117776201, Welding, ชั้นที่ 3, 6"></texta
       <button class="btn-primary" onclick="confirmImport()">นำเข้าระบบ</button>
     </div>
   </div>
+</div>
+
+<!-- FULLSCREEN IMAGE VIEWER -->
+<div id="fullimg-overlay" onclick="closeFullImg()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
+  <button onclick="closeFullImg()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;z-index:10000;">×</button>
+  <img id="fullimg-img" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:12px;">แตะนอกรูปเพื่อปิด</div>
 </div>
 
 <!-- Firebase SDK -->
@@ -1205,6 +1213,18 @@ window.filterHistory = function(type, btn) {
 }
 
 window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); }
+
+window.openFullImg = function(src) {
+  const overlay = document.getElementById('fullimg-overlay');
+  document.getElementById('fullimg-img').src = src;
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+window.closeFullImg = function() {
+  document.getElementById('fullimg-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
 
 // ====== IMPORT ======
 let importData = [];
