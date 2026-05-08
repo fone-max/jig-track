@@ -1596,66 +1596,50 @@ async function _doExcelDownload(exportJigs) {
   try {
     const groups = {};
     exportJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
-
-    const date = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
-    const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
+    const date = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
     const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
+    const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
 
-    let tableRows = '';
-    Object.entries(groups).forEach(([loc, items]) => {
-      tableRows += `
-      <tr><td colspan="7" style="background:#1a1d26;color:#fff;text-align:center;font-weight:bold;font-size:14px;border:2px solid #1a1d26;padding:8px;">📍 ${loc} (${items.length} รายการ)</td></tr>
+    let rows = `<tr><td colspan="7" style="font-size:18px;font-weight:bold;padding:10px;border-bottom:3px solid #000;">LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)</td></tr>
+    <tr><td colspan="7" style="font-size:11px;color:#666;padding:4px;">วันที่: ${date} | จำนวน: ${exportJigs.length} รายการ</td></tr>
+    <tr><td colspan="7"></td></tr>`;
+
+    Object.entries(groups).forEach(([loc,items])=>{
+      rows += `<tr><td colspan="7" style="background:#1a1d26;color:#fff;font-weight:bold;padding:6px;">📍 ${loc} (${items.length} รายการ)</td></tr>
       <tr style="background:#b8ddf0;font-weight:bold;text-align:center;">
-        <td style="border:1px solid #7ab8d8;padding:6px;">ลำดับ</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">รหัส Jig</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">ชื่อ Jig / Model</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">Customer</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">ตำแหน่ง</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">สถานะ</td>
-        <td style="border:1px solid #7ab8d8;padding:6px;">จำนวน</td>
+        <td style="border:1px solid #000;padding:5px;">ลำดับ</td>
+        <td style="border:1px solid #000;padding:5px;">รหัส Jig</td>
+        <td style="border:1px solid #000;padding:5px;">ชื่อ Jig</td>
+        <td style="border:1px solid #000;padding:5px;">Model</td>
+        <td style="border:1px solid #000;padding:5px;">Customer</td>
+        <td style="border:1px solid #000;padding:5px;">สถานะ</td>
+        <td style="border:1px solid #000;padding:5px;">จำนวน</td>
       </tr>`;
-      items.forEach((j, i) => {
-        tableRows += `<tr>
-          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${i+1}</td>
-          <td style="border:1px solid #ccc;padding:6px;font-family:monospace;font-weight:bold;color:#0077aa;">${j.id}</td>
-          <td style="border:1px solid #ccc;padding:6px;"><b>${j.name}</b><br><span style="font-size:11px;color:#777;">${j.model||''}</span></td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${j.customer||'—'}</td>
-          <td style="border:1px solid #ccc;padding:6px;">${j.loc||'—'}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:center;background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#555'};font-weight:bold;">${j.status}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:center;font-weight:bold;font-size:15px;">${j.qty||1}</td>
+      items.forEach((j,i)=>{
+        rows += `<tr>
+          <td style="border:1px solid #ccc;text-align:center;">${i+1}</td>
+          <td style="border:1px solid #ccc;font-weight:bold;color:#0077aa;">${j.id}</td>
+          <td style="border:1px solid #ccc;">${j.name}</td>
+          <td style="border:1px solid #ccc;">${j.model||'-'}</td>
+          <td style="border:1px solid #ccc;text-align:center;">${j.customer||'-'}</td>
+          <td style="border:1px solid #ccc;text-align:center;background:${sBg[j.status]||'#fff'};color:${sColor[j.status]||'#000'};font-weight:bold;">${j.status}</td>
+          <td style="border:1px solid #ccc;text-align:center;font-weight:bold;">${j.qty||1}</td>
         </tr>`;
       });
-      tableRows += `<tr><td colspan="7" style="padding:4px;border:none;"></td></tr>`;
+      rows += `<tr><td colspan="7"></td></tr>`;
     });
 
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head><meta charset="UTF-8">
-    <style>body{font-family:'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif;font-size:13px;}table{border-collapse:collapse;width:100%;}</style>
-    </head><body>
-      <table>
-        <tr><td colspan="7" style="font-size:18px;font-weight:bold;padding:12px;border-bottom:3px solid #1a1d26;">
-          LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)
-        </td></tr>
-        <tr><td colspan="7" style="font-size:11px;color:#666;padding:4px 0 12px;border-bottom:1px solid #ccc;">
-          📅 วันที่: ${date} &nbsp;|&nbsp; จำนวน: ${exportJigs.length} รายการ &nbsp;|&nbsp; ✅ พร้อมใช้: ${exportJigs.filter(j=>j.status==='พร้อมใช้').length} &nbsp;|&nbsp; 🔶 ถูกยืม: ${exportJigs.filter(j=>j.status==='ถูกยืม').length}
-        </td></tr>
-        <tr><td colspan="7" style="padding:4px;border:none;"></td></tr>
-        ${tableRows}
-      </table>
-    </body></html>`;
-
-    const blob = new Blob(['\ufeff' + html], { type:'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `JigList_FONE_${new Date().toISOString().slice(0,10)}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  } catch(err) {
-    console.error('Excel error:', err);
-    alert('เกิดข้อผิดพลาด: ' + err.message);
+    const content = `<html><head><meta charset="UTF-8"></head><body><table>${rows}</table></body></html>`;
+    const uri = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent('\ufeff' + content);
+    const link = document.createElement('a');
+    link.href = uri;
+    link.download = 'JigList_FONE_' + new Date().toISOString().slice(0,10) + '.xls';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch(e) {
+    alert('Error: ' + e.message);
   }
 }
 
