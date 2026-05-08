@@ -1361,34 +1361,42 @@ window.printLabels = function(mode) {
     // ===== โหมด LABEL ติดชั้น: Grid 3 คอลัมน์ต่อแถว =====
     bodyContent = `
     <style>
-      @page { size: A4 portrait; margin: 10mm; }
-      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:12px; background:#fff; }
-      .page-header { display:flex; align-items:center; gap:12px; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px; }
-      .page-header img { height:40px; }
-      .page-header-text h2 { font-size:16px; font-weight:bold; margin:0; }
-      .page-header-text p { font-size:11px; color:#555; margin:2px 0 0; }
-      .label-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
-      .label { border:2px solid #1a1d26; border-radius:8px; padding:8px; page-break-inside:avoid; background:#fff; }
-      .label-header { background:#1a1d26; color:#fff; border-radius:4px; padding:4px 6px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-      .label-id { font-size:13px; font-weight:bold; font-family:monospace; color:#00d4aa; }
-      .label-status { font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold; }
-      .label-img { width:100%; height:80px; border-radius:4px; margin-bottom:6px; background:#f0f2f5; display:flex; align-items:center; justify-content:center; font-size:10px; color:#aaa; overflow:hidden; }
-      .label-img img { width:100%; height:80px; object-fit:contain; border-radius:4px; background:#f0f2f5; }
-      .label-name { font-size:12px; font-weight:bold; color:#1a1d26; margin-bottom:2px; line-height:1.3; }
-      .label-model { font-size:10px; color:#555; margin-bottom:4px; }
+      @page { size: A4 portrait; margin: 8mm; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:11px; background:#fff; margin:0; padding:0; }
+      .page-header { display:flex; align-items:center; gap:12px; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; }
+      .page-header img { height:36px; }
+      .page-header-text h2 { font-size:14px; font-weight:bold; margin:0; }
+      .page-header-text p { font-size:10px; color:#555; margin:1px 0 0; }
+      .label-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; width:100%; }
+      .label { border:1.5px solid #1a1d26; border-radius:6px; padding:6px; page-break-inside:avoid; break-inside:avoid; background:#fff; box-sizing:border-box; }
+      .label-header { background:#1a1d26; color:#fff; border-radius:3px; padding:3px 5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+      .label-id { font-size:11px; font-weight:bold; font-family:monospace; color:#00d4aa; }
+      .label-status { font-size:9px; padding:1px 5px; border-radius:8px; font-weight:bold; }
+      .label-img { width:100%; height:70px; border-radius:3px; margin-bottom:5px; background:#f0f2f5; display:flex; align-items:center; justify-content:center; font-size:9px; color:#aaa; overflow:hidden; }
+      .label-img img { width:100%; height:70px; object-fit:contain; background:#f0f2f5; }
+      .label-name { font-size:11px; font-weight:bold; color:#1a1d26; margin-bottom:1px; line-height:1.2; word-break:break-all; }
+      .label-model { font-size:9px; color:#555; margin-bottom:3px; word-break:break-all; }
       .label-info { display:flex; justify-content:space-between; align-items:flex-end; }
-      .label-loc { font-size:10px; color:#0077aa; font-weight:bold; }
-      .label-qty { font-size:18px; font-weight:bold; color:#1a1d26; font-family:monospace; line-height:1; }
-      .label-qty-unit { font-size:9px; color:#888; }
+      .label-loc { font-size:9px; color:#0077aa; font-weight:bold; }
+      .label-qty { font-size:16px; font-weight:bold; color:#1a1d26; font-family:monospace; line-height:1; }
+      .label-qty-unit { font-size:8px; color:#888; }
       .label-qr { text-align:center; }
-      .section-divider { grid-column:1/-1; background:#b8ddf0; border-radius:6px; padding:4px 12px; font-weight:bold; font-size:12px; margin:4px 0 2px; border:1px solid #7ab8d8; }
-      @media print { .no-print { display:none !important; } }
+      .section-divider { grid-column:1/-1; background:#b8ddf0; border-radius:4px; padding:3px 10px; font-weight:bold; font-size:11px; margin:3px 0 2px; border:1px solid #7ab8d8; }
+      @media print {
+        .no-print { display:none !important; }
+        body { margin:0; padding:0; }
+        .label-grid { page-break-inside:auto; }
+        .label { page-break-inside:avoid; break-inside:avoid; }
+        .section-divider { page-break-inside:avoid; break-inside:avoid; }
+      }
     </style>
-    <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <button onclick="window.print()" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ พิมพ์ Label</button>
       <button onclick="downloadExcelFromPrint(this)" style="background:#0984e3;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
       <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">← กลับ</button>
       <span style="align-self:center;font-size:13px;color:#555;">${printJigs.length} รายการ · Label ติดชั้นวาง</span>
+      <span style="font-size:11px;color:#e17055;margin-left:auto;">⚠️ ติ๊ก "Background graphics" ด้วยเพื่อให้สีและรูปแสดงครบ</span>
     </div>
     <div class="page-header">
       ${logoSrc ? `<img src="${logoSrc}">` : ''}
@@ -1496,7 +1504,7 @@ window.printLabels = function(mode) {
       const prefix = mode === 'label' ? 'lqr-' : 'dqr-';
       const el = document.getElementById(`${prefix}${j.id}`);
       if(el) {
-        try { new QRCode(el, { text:qrText, width:mode==='label'?45:55, height:mode==='label'?45:55, colorLight:'#ffffff', colorDark:'#000000' }); }
+        try { new QRCode(el, { text:qrText, width:mode==='label'?40:55, height:mode==='label'?40:55, colorLight:'#ffffff', colorDark:'#000000' }); }
         catch(e) {}
       }
     });
