@@ -685,6 +685,7 @@ function setSyncStatus(status) {
 // Real-time listener for jigs
 onSnapshot(collection(db, 'jigs'), (snapshot) => {
   jigs = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+  window._jigs = jigs; // sync for Excel download
   document.getElementById('loading-overlay').style.display = 'none';
   setSyncStatus('live');
   updateHeaderStats();
@@ -1321,6 +1322,7 @@ window.renderPrintList = function() {
 window.togglePrintSelect = function(id) {
   if(selectedPrintIds.has(id)) selectedPrintIds.delete(id);
   else selectedPrintIds.add(id);
+  window._selectedPrintIds = selectedPrintIds; // sync for Excel
   renderPrintList();
 }
 
@@ -1547,104 +1549,9 @@ window.printLabels = function(mode) {
         </table>
       </div>`).join('')}`;
 
-window.downloadExcelFromPrint = async function(btn) {
-  // ถ้าไม่มี _lastPrintJigs ให้ใช้ selectedPrintIds หรือทั้งหมด
-  const exportJigs = (window._lastPrintJigs && window._lastPrintJigs.length > 0)
-    ? window._lastPrintJigs
-    : (selectedPrintIds.size > 0 ? [...selectedPrintIds] : jigs.map(j=>j.id)).map(id=>jigs.find(j=>j.id===id)).filter(Boolean);
-  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ครับ'); return; }
-  if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
-  try {
-    await _doExcelDownload(exportJigs);
-  } finally {
-    if(btn) { btn.textContent = '📊 ดาวน์โหลด Excel'; btn.disabled = false; }
-  }
-}
-
-window.downloadExcel = async function(btn) {
-  const ids = selectedPrintIds.size > 0 ? [...selectedPrintIds] : jigs.map(j=>j.id);
-  const exportJigs = ids.map(id=>jigs.find(j=>j.id===id)).filter(Boolean);
-  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ในระบบครับ'); return; }
-  if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
-  try {
-    await _doExcelDownload(exportJigs);
-  } finally {
-    if(btn) { btn.textContent = '📊 Excel'; btn.disabled = false; }
-  }
-}
-
-function generateQRDataURL(text, size) {
-  return new Promise(resolve => {
-    const div = document.createElement('div');
-    div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-    document.body.appendChild(div);
-    try {
-      new QRCode(div, { text, width:size, height:size, colorLight:'#ffffff', colorDark:'#000000' });
-      setTimeout(() => {
-        const img = div.querySelector('img');
-        const canvas = div.querySelector('canvas');
-        let src = '';
-        if(img && img.src) src = img.src;
-        else if(canvas) src = canvas.toDataURL();
-        document.body.removeChild(div);
-        resolve(src);
-      }, 200);
-    } catch(e) { document.body.removeChild(div); resolve(''); }
-  });
-}
-
-async function _doExcelDownload(exportJigs) {
-  try {
-    const groups = {};
-    exportJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
-    const date = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
-    const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
-    const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
-
-    let rows = `<tr><td colspan="7" style="font-size:18px;font-weight:bold;padding:10px;border-bottom:3px solid #000;">LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)</td></tr>
-    <tr><td colspan="7" style="font-size:11px;color:#666;padding:4px;">วันที่: ${date} | จำนวน: ${exportJigs.length} รายการ</td></tr>
-    <tr><td colspan="7"></td></tr>`;
-
-    Object.entries(groups).forEach(([loc,items])=>{
-      rows += `<tr><td colspan="7" style="background:#1a1d26;color:#fff;font-weight:bold;padding:6px;">📍 ${loc} (${items.length} รายการ)</td></tr>
-      <tr style="background:#b8ddf0;font-weight:bold;text-align:center;">
-        <td style="border:1px solid #000;padding:5px;">ลำดับ</td>
-        <td style="border:1px solid #000;padding:5px;">รหัส Jig</td>
-        <td style="border:1px solid #000;padding:5px;">ชื่อ Jig</td>
-        <td style="border:1px solid #000;padding:5px;">Model</td>
-        <td style="border:1px solid #000;padding:5px;">Customer</td>
-        <td style="border:1px solid #000;padding:5px;">สถานะ</td>
-        <td style="border:1px solid #000;padding:5px;">จำนวน</td>
-      </tr>`;
-      items.forEach((j,i)=>{
-        rows += `<tr>
-          <td style="border:1px solid #ccc;text-align:center;">${i+1}</td>
-          <td style="border:1px solid #ccc;font-weight:bold;color:#0077aa;">${j.id}</td>
-          <td style="border:1px solid #ccc;">${j.name}</td>
-          <td style="border:1px solid #ccc;">${j.model||'-'}</td>
-          <td style="border:1px solid #ccc;text-align:center;">${j.customer||'-'}</td>
-          <td style="border:1px solid #ccc;text-align:center;background:${sBg[j.status]||'#fff'};color:${sColor[j.status]||'#000'};font-weight:bold;">${j.status}</td>
-          <td style="border:1px solid #ccc;text-align:center;font-weight:bold;">${j.qty||1}</td>
-        </tr>`;
-      });
-      rows += `<tr><td colspan="7"></td></tr>`;
-    });
-
-    const content = `<html><head><meta charset="UTF-8"></head><body><table>${rows}</table></body></html>`;
-    const uri = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent('\ufeff' + content);
-    const link = document.createElement('a');
-    link.href = uri;
-    link.download = 'JigList_FONE_' + new Date().toISOString().slice(0,10) + '.xls';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
 
 // ====== LANGUAGE SYSTEM ======
+
 const LANGS = {
   th: {
     flag:'🇹🇭', label:'ไทย',
@@ -2080,5 +1987,67 @@ window.stopScanner = function() {
   document.getElementById('scanner-active').style.display = 'none';
 }
 </script>
+
+<script>
+// ====== EXCEL DOWNLOAD (outside module for global access) ======
+window.downloadExcelFromPrint = async function(btn) {
+  var exportJigs = (window._lastPrintJigs && window._lastPrintJigs.length > 0)
+    ? window._lastPrintJigs
+    : (window._jigs || []);
+  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ครับ'); return; }
+  if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
+  try { await window._doExcelDownload(exportJigs); }
+  finally { if(btn) { btn.textContent = '📊 ดาวน์โหลด Excel'; btn.disabled = false; } }
+};
+
+window.downloadExcel = async function(btn) {
+  var exportJigs = (window._selectedPrintIds && window._selectedPrintIds.size > 0)
+    ? [...window._selectedPrintIds].map(id=>(window._jigs||[]).find(j=>j.id===id)).filter(Boolean)
+    : (window._jigs || []);
+  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ครับ'); return; }
+  if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
+  try { await window._doExcelDownload(exportJigs); }
+  finally { if(btn) { btn.textContent = '📊 Excel'; btn.disabled = false; } }
+};
+
+window._doExcelDownload = async function(exportJigs) {
+  try {
+    var groups = {};
+    exportJigs.forEach(function(j) {
+      var loc = j.loc || 'ไม่ระบุ';
+      if(!groups[loc]) groups[loc] = [];
+      groups[loc].push(j);
+    });
+    var date = new Date().toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
+    var sBg = {'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
+    var rows = '<tr><td colspan="7" style="font-size:16px;font-weight:bold;padding:10px;">LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)</td></tr>';
+    rows += '<tr><td colspan="7" style="color:#666;padding:4px;">วันที่: ' + date + ' | จำนวน: ' + exportJigs.length + ' รายการ | พร้อมใช้: ' + exportJigs.filter(function(j){return j.status==='พร้อมใช้';}).length + ' | ถูกยืม: ' + exportJigs.filter(function(j){return j.status==='ถูกยืม';}).length + '</td></tr>';
+    rows += '<tr><td colspan="7"></td></tr>';
+
+    Object.keys(groups).forEach(function(loc) {
+      var items = groups[loc];
+      rows += '<tr><td colspan="7" style="background:#1a1d26;color:#fff;font-weight:bold;padding:6px;">📍 ' + loc + ' (' + items.length + ' รายการ)</td></tr>';
+      rows += '<tr style="background:#b8ddf0;font-weight:bold;text-align:center;"><td style="border:1px solid #000;padding:5px;">ลำดับ</td><td style="border:1px solid #000;padding:5px;">รหัส Jig</td><td style="border:1px solid #000;padding:5px;">ชื่อ Jig</td><td style="border:1px solid #000;padding:5px;">Model</td><td style="border:1px solid #000;padding:5px;">Customer</td><td style="border:1px solid #000;padding:5px;">สถานะ</td><td style="border:1px solid #000;padding:5px;">จำนวน</td></tr>';
+      items.forEach(function(j, i) {
+        rows += '<tr><td style="border:1px solid #ccc;text-align:center;">' + (i+1) + '</td><td style="border:1px solid #ccc;font-weight:bold;color:#0077aa;">' + j.id + '</td><td style="border:1px solid #ccc;">' + j.name + '</td><td style="border:1px solid #ccc;">' + (j.model||'-') + '</td><td style="border:1px solid #ccc;text-align:center;">' + (j.customer||'-') + '</td><td style="border:1px solid #ccc;text-align:center;background:' + (sBg[j.status]||'#fff') + ';font-weight:bold;">' + j.status + '</td><td style="border:1px solid #ccc;text-align:center;font-weight:bold;">' + (j.qty||1) + '</td></tr>';
+      });
+      rows += '<tr><td colspan="7"></td></tr>';
+    });
+
+    var uri = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent('\ufeff<html><head><meta charset="UTF-8"></head><body><table>' + rows + '</table></body></html>');
+    var a = document.createElement('a');
+    a.href = uri;
+    a.download = 'JigList_FONE_' + new Date().toISOString().slice(0,10) + '.xls';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch(e) {
+    console.error(e);
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+};
+</script>
+
 </body>
 </html>
