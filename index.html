@@ -573,7 +573,7 @@ tr:hover td { background: #f8fffe; }
     </select>
     <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;">
       <button class="btn-sec" onclick="toggleSelectAll()">☑ เลือกทั้งหมด</button>
-      <button onclick="downloadExcel()" style="background:#00b894;border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
+      <button onclick="downloadExcel(this)" style="background:#00b894;border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
         📊 Excel
       </button>
       <button onclick="printLabels('label')" style="background:linear-gradient(135deg,#e17055,#d63031);border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
@@ -1384,7 +1384,7 @@ window.printLabels = function(mode) {
     </style>
     <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <button onclick="window.print()" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ พิมพ์ Label</button>
-      <button onclick="downloadExcelFromPrint()" style="background:#0984e3;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
+      <button onclick="downloadExcelFromPrint(this)" style="background:#0984e3;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
       <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">← กลับ</button>
       <span style="align-self:center;font-size:13px;color:#555;">${printJigs.length} รายการ · Label ติดชั้นวาง</span>
     </div>
@@ -1442,7 +1442,7 @@ window.printLabels = function(mode) {
     </style>
     <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:12px;">
       <button onclick="window.print()" style="background:#0984e3;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ พิมพ์เอกสาร</button>
-      <button onclick="downloadExcelFromPrint()" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
+      <button onclick="downloadExcelFromPrint(this)" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
       <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">← กลับ</button>
       <span style="align-self:center;font-size:13px;color:#555;">${printJigs.length} รายการ · เอกสารเก็บบันทึก</span>
     </div>
@@ -1517,7 +1517,7 @@ window.printLabels = function(mode) {
     </style>
     <div class="no-print" style="padding:12px 16px;background:#f0f0f0;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <button onclick="window.print()" style="background:#00b894;color:#fff;border:none;padding:10px 24px;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;">🖨️ พิมพ์เลย</button>
-      <button onclick="downloadExcelFromPrint()" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;border:none;padding:10px 20px;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;">📊 ดาวน์โหลด Excel</button>
+      <button onclick="downloadExcelFromPrint(this)" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;border:none;padding:10px 20px;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;">📊 ดาวน์โหลด Excel</button>
       <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:10px 16px;font-size:13px;border-radius:8px;cursor:pointer;">← กลับ</button>
       <span style="font-size:13px;color:#636e72;">พร้อมปริ้น ${printJigs.length} รายการ</span>
     </div>
@@ -1547,10 +1547,12 @@ window.printLabels = function(mode) {
         </table>
       </div>`).join('')}`;
 
-window.downloadExcelFromPrint = async function() {
-  const exportJigs = window._lastPrintJigs || [];
-  if(!exportJigs.length) { alert('ไม่พบข้อมูล กรุณาเลือก Jig ก่อนครับ'); return; }
-  const btn = event?.target;
+window.downloadExcelFromPrint = async function(btn) {
+  // ถ้าไม่มี _lastPrintJigs ให้ใช้ selectedPrintIds หรือทั้งหมด
+  const exportJigs = (window._lastPrintJigs && window._lastPrintJigs.length > 0)
+    ? window._lastPrintJigs
+    : (selectedPrintIds.size > 0 ? [...selectedPrintIds] : jigs.map(j=>j.id)).map(id=>jigs.find(j=>j.id===id)).filter(Boolean);
+  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ครับ'); return; }
   if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
   try {
     await _doExcelDownload(exportJigs);
@@ -1559,11 +1561,10 @@ window.downloadExcelFromPrint = async function() {
   }
 }
 
-window.downloadExcel = async function() {
+window.downloadExcel = async function(btn) {
   const ids = selectedPrintIds.size > 0 ? [...selectedPrintIds] : jigs.map(j=>j.id);
   const exportJigs = ids.map(id=>jigs.find(j=>j.id===id)).filter(Boolean);
-  if(!exportJigs.length) { alert('กรุณาเลือก Jig ที่ต้องการดาวน์โหลดก่อนครับ'); return; }
-  const btn = event?.target;
+  if(!exportJigs.length) { alert('ไม่มีข้อมูล Jig ในระบบครับ'); return; }
   if(btn) { btn.textContent = '⏳ กำลังสร้าง...'; btn.disabled = true; }
   try {
     await _doExcelDownload(exportJigs);
