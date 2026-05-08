@@ -603,14 +603,8 @@ tr:hover td { background: #f8fffe; }
 <style>
 @media print {
   body > * { display: none !important; }
-  #print-area { display: block !important; }
-  .print-label { border: 2px solid #000; border-radius: 8px; padding: 12px; width: 180px; text-align: center; display: inline-block; margin: 6px; page-break-inside: avoid; font-family: sans-serif; }
-  .print-label-title { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
-  .print-label-model { font-size: 11px; color: #333; margin-bottom: 2px; }
-  .print-label-loc { font-size: 10px; color: #666; margin-bottom: 6px; }
-  .print-label-qty { font-size: 18px; font-weight: bold; margin-bottom: 6px; }
-  .print-label-qty-label { font-size: 10px; color: #666; }
-  .print-label-qr { margin: 6px auto 0; }
+  #print-area { display: block !important; height: auto !important; overflow: visible !important; position: static !important; }
+  html, body { height: auto !important; overflow: visible !important; }
 }
 .print-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color 0.15s; position: relative; }
 .print-card.selected { border-color: var(--accent); background: rgba(0,212,170,0.06); }
@@ -1362,14 +1356,15 @@ window.printLabels = function(mode) {
     bodyContent = `
     <style>
       @page { size: A4 portrait; margin: 8mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:11px; background:#fff; margin:0; padding:0; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+      html, body { margin:0; padding:0; height:auto !important; overflow:visible !important; }
+      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:11px; background:#fff; }
       .page-header { display:flex; align-items:center; gap:12px; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:8px; }
       .page-header img { height:36px; }
       .page-header-text h2 { font-size:14px; font-weight:bold; margin:0; }
       .page-header-text p { font-size:10px; color:#555; margin:1px 0 0; }
       .label-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; width:100%; }
-      .label { border:1.5px solid #1a1d26; border-radius:6px; padding:6px; page-break-inside:avoid; break-inside:avoid; background:#fff; box-sizing:border-box; }
+      .label { border:1.5px solid #1a1d26; border-radius:6px; padding:6px; page-break-inside:avoid; break-inside:avoid; background:#fff; }
       .label-header { background:#1a1d26; color:#fff; border-radius:3px; padding:3px 5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
       .label-id { font-size:11px; font-weight:bold; font-family:monospace; color:#00d4aa; }
       .label-status { font-size:9px; padding:1px 5px; border-radius:8px; font-weight:bold; }
@@ -1382,13 +1377,12 @@ window.printLabels = function(mode) {
       .label-qty { font-size:16px; font-weight:bold; color:#1a1d26; font-family:monospace; line-height:1; }
       .label-qty-unit { font-size:8px; color:#888; }
       .label-qr { text-align:center; }
-      .section-divider { grid-column:1/-1; background:#b8ddf0; border-radius:4px; padding:3px 10px; font-weight:bold; font-size:11px; margin:3px 0 2px; border:1px solid #7ab8d8; }
+      .section-divider { grid-column:1/-1; background:#b8ddf0; border-radius:4px; padding:3px 10px; font-weight:bold; font-size:11px; margin:3px 0 2px; border:1px solid #7ab8d8; page-break-inside:avoid; break-inside:avoid; }
       @media print {
         .no-print { display:none !important; }
-        body { margin:0; padding:0; }
-        .label-grid { page-break-inside:auto; }
-        .label { page-break-inside:avoid; break-inside:avoid; }
-        .section-divider { page-break-inside:avoid; break-inside:avoid; }
+        html, body { height:auto !important; overflow:visible !important; }
+        #print-area { display:block !important; height:auto !important; overflow:visible !important; }
+        .label-grid { height:auto !important; overflow:visible !important; }
       }
     </style>
     <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
