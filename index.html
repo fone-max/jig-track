@@ -1593,85 +1593,72 @@ function generateQRDataURL(text, size) {
 }
 
 async function _doExcelDownload(exportJigs) {
-  const groups = {};
-  exportJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
+  try {
+    const groups = {};
+    exportJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
 
-  const date = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
-  const logoEl = document.querySelector('.header img');
-  const logoSrc = logoEl ? logoEl.src : '';
+    const date = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
+    const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
+    const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
 
-  // Generate QR for all jigs first
-  const qrMap = {};
-  for(const j of exportJigs) {
-    qrMap[j.id] = await generateQRDataURL(`JIG:${j.id}:${j.name}`, 80);
-  }
-
-  const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
-  const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
-
-  let tableRows = '';
-  Object.entries(groups).forEach(([loc, items]) => {
-    tableRows += `
-    <tr><td colspan="8" style="background:#1a1d26;color:#fff;text-align:center;font-weight:bold;font-size:14px;border:2px solid #1a1d26;padding:8px;">📍 ${loc} (${items.length} รายการ)</td></tr>
-    <tr style="background:#b8ddf0;font-weight:bold;text-align:center;">
-      <td style="border:1px solid #7ab8d8;padding:6px;">ลำดับ</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">รหัส Jig</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">รูปภาพ</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">ชื่อ Jig</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">Model</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">Customer</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">สถานะ</td>
-      <td style="border:1px solid #7ab8d8;padding:6px;">QR Code</td>
-    </tr>`;
-    items.forEach((j, i) => {
-      tableRows += `<tr>
-        <td style="border:1px solid #ccc;padding:6px;text-align:center;">${i+1}</td>
-        <td style="border:1px solid #ccc;padding:6px;font-family:monospace;font-weight:bold;color:#0077aa;">${j.id}</td>
-        <td style="border:1px solid #ccc;padding:4px;text-align:center;">${j.imageData?`<img src="${j.imageData}" width="50" height="50" style="object-fit:cover;border-radius:4px;">`:'—'}</td>
-        <td style="border:1px solid #ccc;padding:6px;font-weight:500;">${j.name}</td>
-        <td style="border:1px solid #ccc;padding:6px;">${j.model||'—'}</td>
-        <td style="border:1px solid #ccc;padding:6px;text-align:center;">${j.customer||'—'}</td>
-        <td style="border:1px solid #ccc;padding:6px;text-align:center;background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#555'};font-weight:bold;">${j.status}</td>
-        <td style="border:1px solid #ccc;padding:4px;text-align:center;">${qrMap[j.id]?`<img src="${qrMap[j.id]}" width="70" height="70">`:'—'}</td>
+    let tableRows = '';
+    Object.entries(groups).forEach(([loc, items]) => {
+      tableRows += `
+      <tr><td colspan="7" style="background:#1a1d26;color:#fff;text-align:center;font-weight:bold;font-size:14px;border:2px solid #1a1d26;padding:8px;">📍 ${loc} (${items.length} รายการ)</td></tr>
+      <tr style="background:#b8ddf0;font-weight:bold;text-align:center;">
+        <td style="border:1px solid #7ab8d8;padding:6px;">ลำดับ</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">รหัส Jig</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">ชื่อ Jig / Model</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">Customer</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">ตำแหน่ง</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">สถานะ</td>
+        <td style="border:1px solid #7ab8d8;padding:6px;">จำนวน</td>
       </tr>`;
+      items.forEach((j, i) => {
+        tableRows += `<tr>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${i+1}</td>
+          <td style="border:1px solid #ccc;padding:6px;font-family:monospace;font-weight:bold;color:#0077aa;">${j.id}</td>
+          <td style="border:1px solid #ccc;padding:6px;"><b>${j.name}</b><br><span style="font-size:11px;color:#777;">${j.model||''}</span></td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${j.customer||'—'}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${j.loc||'—'}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center;background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#555'};font-weight:bold;">${j.status}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center;font-weight:bold;font-size:15px;">${j.qty||1}</td>
+        </tr>`;
+      });
+      tableRows += `<tr><td colspan="7" style="padding:4px;border:none;"></td></tr>`;
     });
-    tableRows += `<tr><td colspan="8" style="padding:6px;border:none;"></td></tr>`;
-  });
 
-  const html = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="UTF-8">
-    <style>
-      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:13px; }
-      table { border-collapse:collapse; width:100%; }
-    </style>
-    </head>
-    <body>
+    <style>body{font-family:'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif;font-size:13px;}table{border-collapse:collapse;width:100%;}</style>
+    </head><body>
       <table>
-        <tr>
-          <td colspan="8" style="padding:12px;border-bottom:3px solid #1a1d26;">
-            ${logoSrc?`<img src="${logoSrc}" height="40" style="vertical-align:middle;margin-right:12px;">`:''}
-            <span style="font-size:18px;font-weight:bold;vertical-align:middle;">LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)</span>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="8" style="font-size:11px;color:#666;padding:4px 0 12px;border-bottom:1px solid #ccc;">
-            📅 วันที่ออกรายงาน: ${date} &nbsp;|&nbsp; จำนวน Jig: ${exportJigs.length} รายการ
-          </td>
-        </tr>
-        <tr><td colspan="8" style="padding:6px;border:none;"></td></tr>
+        <tr><td colspan="7" style="font-size:18px;font-weight:bold;padding:12px;border-bottom:3px solid #1a1d26;">
+          LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)
+        </td></tr>
+        <tr><td colspan="7" style="font-size:11px;color:#666;padding:4px 0 12px;border-bottom:1px solid #ccc;">
+          📅 วันที่: ${date} &nbsp;|&nbsp; จำนวน: ${exportJigs.length} รายการ &nbsp;|&nbsp; ✅ พร้อมใช้: ${exportJigs.filter(j=>j.status==='พร้อมใช้').length} &nbsp;|&nbsp; 🔶 ถูกยืม: ${exportJigs.filter(j=>j.status==='ถูกยืม').length}
+        </td></tr>
+        <tr><td colspan="7" style="padding:4px;border:none;"></td></tr>
         ${tableRows}
       </table>
     </body></html>`;
 
-  const blob = new Blob(['\ufeff' + html], { type:'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `JigList_FONE_${new Date().toISOString().slice(0,10)}.xls`;
-  a.click();
-  URL.revokeObjectURL(url);
+    const blob = new Blob(['\ufeff' + html], { type:'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `JigList_FONE_${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  } catch(err) {
+    console.error('Excel error:', err);
+    alert('เกิดข้อผิดพลาด: ' + err.message);
+  }
 }
+
 // ====== LANGUAGE SYSTEM ======
 const LANGS = {
   th: {
