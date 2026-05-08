@@ -572,13 +572,27 @@ tr:hover td { background: #f8fffe; }
       <option value="">ทุกตำแหน่ง / ชั้น</option>
     </select>
     <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;">
-      <button class="btn-sec" onclick="toggleSelectAll()">เลือกทั้งหมด</button>
-      <button onclick="downloadExcel()" style="background:linear-gradient(135deg,#00b894,#00cec9);border:none;color:#fff;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,184,148,0.3);">
-        <span>📊</span> ดาวน์โหลด Excel
+      <button class="btn-sec" onclick="toggleSelectAll()">☑ เลือกทั้งหมด</button>
+      <button onclick="downloadExcel()" style="background:#00b894;border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
+        📊 Excel
       </button>
-      <button class="btn-primary" onclick="printLabels()" style="display:flex;align-items:center;gap:6px;">
-        <span>🖨️</span> สั่งปริ้น
+      <button onclick="printLabels('label')" style="background:linear-gradient(135deg,#e17055,#d63031);border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
+        🏷️ Label ติดชั้น
       </button>
+      <button onclick="printLabels('doc')" style="background:linear-gradient(135deg,#0984e3,#74b9ff);border:none;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;">
+        📋 เอกสารเก็บบันทึก
+      </button>
+    </div>
+  </div>
+  <!-- Legend -->
+  <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+      <span style="background:linear-gradient(135deg,#e17055,#d63031);width:12px;height:12px;border-radius:3px;display:inline-block;"></span>
+      🏷️ Label ติดชั้นวาง — 3 คอลัมน์ต่อแถว มีรูป + QR พร้อมติด
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+      <span style="background:linear-gradient(135deg,#0984e3,#74b9ff);width:12px;height:12px;border-radius:3px;display:inline-block;"></span>
+      📋 เอกสาร — ตารางรายการพร้อม QR ทุกแถว สำหรับเก็บบันทึก
     </div>
   </div>
   <div id="print-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;"></div>
@@ -1318,15 +1332,173 @@ window.toggleSelectAll = function() {
   renderPrintList();
 }
 
-window.printLabels = function() {
+window.printLabels = function(mode) {
+  // mode: 'label' = ติดชั้น (sticker grid), 'doc' = เก็บเอกสาร (ตารางพร้อม QR)
   const ids = selectedPrintIds.size > 0 ? [...selectedPrintIds] : jigs.map(j=>j.id);
   const printJigs = ids.map(id=>jigs.find(j=>j.id===id)).filter(Boolean);
-  window._lastPrintJigs = printJigs; // เก็บไว้ให้ Excel ใช้
-  if(!printJigs.length) { alert('กรุณาเลือก Jig ที่ต้องการปริ้นก่อนครับ'); return; }
+  window._lastPrintJigs = printJigs;
+  if(!printJigs.length) { alert('กรุณาเลือก Jig ก่อนครับ'); return; }
+
+  const logoB64 = document.getElementById('md-img')?.src || '';
+  // หา logo จาก header
+  const logoEl = document.querySelector('.header img');
+  const logoSrc = logoEl ? logoEl.src : '';
+
+  const date = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
 
   // Group by location
   const groups = {};
   printJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
+
+  const sColor={'พร้อมใช้':'#00a86b','ถูกยืม':'#e07000','รอซ่อม':'#c0392b','เลิกใช้':'#888'};
+  const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
+
+  let bodyContent = '';
+
+  if(mode === 'label') {
+    // ===== โหมด LABEL ติดชั้น: Grid 3 คอลัมน์ต่อแถว =====
+    bodyContent = `
+    <style>
+      @page { size: A4 portrait; margin: 10mm; }
+      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:12px; background:#fff; }
+      .page-header { display:flex; align-items:center; gap:12px; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px; }
+      .page-header img { height:40px; }
+      .page-header-text h2 { font-size:16px; font-weight:bold; margin:0; }
+      .page-header-text p { font-size:11px; color:#555; margin:2px 0 0; }
+      .label-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+      .label { border:2px solid #1a1d26; border-radius:8px; padding:8px; page-break-inside:avoid; background:#fff; }
+      .label-header { background:#1a1d26; color:#fff; border-radius:4px; padding:4px 6px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+      .label-id { font-size:13px; font-weight:bold; font-family:monospace; color:#00d4aa; }
+      .label-status { font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold; }
+      .label-img { width:100%; height:60px; object-fit:cover; border-radius:4px; margin-bottom:6px; background:#f0f2f5; display:flex; align-items:center; justify-content:center; font-size:10px; color:#aaa; }
+      .label-img img { width:100%; height:60px; object-fit:cover; border-radius:4px; }
+      .label-name { font-size:12px; font-weight:bold; color:#1a1d26; margin-bottom:2px; line-height:1.3; }
+      .label-model { font-size:10px; color:#555; margin-bottom:4px; }
+      .label-info { display:flex; justify-content:space-between; align-items:flex-end; }
+      .label-loc { font-size:10px; color:#0077aa; font-weight:bold; }
+      .label-qty { font-size:18px; font-weight:bold; color:#1a1d26; font-family:monospace; line-height:1; }
+      .label-qty-unit { font-size:9px; color:#888; }
+      .label-qr { text-align:center; }
+      .section-divider { grid-column:1/-1; background:#b8ddf0; border-radius:6px; padding:4px 12px; font-weight:bold; font-size:12px; margin:4px 0 2px; border:1px solid #7ab8d8; }
+      @media print { .no-print { display:none !important; } }
+    </style>
+    <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:12px;">
+      <button onclick="window.print()" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ พิมพ์ Label</button>
+      <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">← กลับ</button>
+      <span style="align-self:center;font-size:13px;color:#555;">${printJigs.length} รายการ · Label ติดชั้นวาง</span>
+    </div>
+    <div class="page-header">
+      ${logoSrc ? `<img src="${logoSrc}">` : ''}
+      <div class="page-header-text">
+        <h2>LABEL JIG — บริษัท เอฟวัน ไทย จำกัด</h2>
+        <p>FONE THAI CO., LTD. · วันที่พิมพ์: ${date}</p>
+      </div>
+    </div>
+    <div class="label-grid" id="label-grid-wrap">
+      ${Object.entries(groups).map(([loc, items]) => `
+        <div class="section-divider">📍 ${loc}</div>
+        ${items.map(j => `
+          <div class="label">
+            <div class="label-header">
+              <span class="label-id">${j.id}</span>
+              <span class="label-status" style="background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#888'};">${j.status}</span>
+            </div>
+            ${j.imageData ? `<div class="label-img"><img src="${j.imageData}"></div>` : `<div class="label-img">🔧 ไม่มีรูป</div>`}
+            <div class="label-name">${j.name}</div>
+            <div class="label-model">${j.model||''} ${j.customer?`· ${j.customer}`:''}</div>
+            <div class="label-info">
+              <div>
+                <div class="label-loc">📍 ${j.loc||'—'}</div>
+                <div><span class="label-qty">${j.qty||1}</span> <span class="label-qty-unit">ชิ้น</span></div>
+              </div>
+              <div class="label-qr" id="lqr-${j.id}"></div>
+            </div>
+          </div>`).join('')}`).join('')}
+    </div>`;
+
+  } else {
+    // ===== โหมด DOCUMENT เก็บเอกสาร: ตารางพร้อม QR ทุกแถว =====
+    bodyContent = `
+    <style>
+      @page { size: A4 portrait; margin: 12mm; }
+      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:13px; background:#fff; }
+      .doc-header { display:flex; align-items:center; gap:16px; border-bottom:3px solid #1a1d26; padding-bottom:10px; margin-bottom:14px; }
+      .doc-header img { height:50px; }
+      .doc-header-text h1 { font-size:20px; font-weight:bold; margin:0; }
+      .doc-header-text p { font-size:12px; color:#555; margin:2px 0 0; }
+      .doc-meta { font-size:11px; color:#666; margin-bottom:12px; padding:6px 10px; background:#f5f5f5; border-radius:4px; }
+      .section-title { background:#1a1d26; color:#fff; padding:6px 14px; font-size:14px; font-weight:bold; margin:12px 0 0; border-radius:6px 6px 0 0; }
+      table { width:100%; border-collapse:collapse; margin-bottom:0; }
+      th { background:#b8ddf0; border:1.5px solid #7ab8d8; padding:7px 8px; font-size:12px; text-align:center; font-weight:bold; }
+      td { border:1px solid #ccc; padding:6px 8px; font-size:12px; vertical-align:middle; }
+      tr:nth-child(even) td { background:#f8fbff; }
+      .jig-id { font-family:monospace; font-weight:bold; color:#0077aa; }
+      .status-cell { text-align:center; border-radius:4px; padding:2px 6px; font-weight:bold; font-size:11px; }
+      .qr-td { text-align:center; width:60px; }
+      .img-td { width:50px; text-align:center; }
+      .img-td img { width:45px; height:45px; object-fit:cover; border-radius:4px; }
+      @media print { .no-print { display:none !important; } }
+    </style>
+    <div class="no-print" style="padding:10px;background:#eee;display:flex;gap:8px;margin-bottom:12px;">
+      <button onclick="window.print()" style="background:#0984e3;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ พิมพ์เอกสาร</button>
+      <button onclick="downloadExcelFromPrint()" style="background:#00b894;color:#fff;border:none;padding:8px 20px;font-weight:bold;border-radius:6px;cursor:pointer;font-size:14px;">📊 ดาวน์โหลด Excel</button>
+      <button onclick="document.getElementById('print-area').style.display='none';document.querySelector('.app').style.display='flex';" style="background:#636e72;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">← กลับ</button>
+      <span style="align-self:center;font-size:13px;color:#555;">${printJigs.length} รายการ · เอกสารเก็บบันทึก</span>
+    </div>
+    <div class="doc-header">
+      ${logoSrc ? `<img src="${logoSrc}">` : ''}
+      <div class="doc-header-text">
+        <h1>รายการ Jig — LIST JIG</h1>
+        <p>บริษัท เอฟวัน ไทย จำกัด · FONE THAI CO., LTD.</p>
+      </div>
+    </div>
+    <div class="doc-meta">
+      📅 วันที่ออกรายงาน: ${date} &nbsp;|&nbsp; 
+      📦 จำนวนทั้งหมด: ${printJigs.length} รายการ &nbsp;|&nbsp;
+      ✅ พร้อมใช้: ${printJigs.filter(j=>j.status==='พร้อมใช้').length} &nbsp;|&nbsp;
+      🔶 ถูกยืม: ${printJigs.filter(j=>j.status==='ถูกยืม').length} &nbsp;|&nbsp;
+      🔧 รอซ่อม: ${printJigs.filter(j=>j.status==='รอซ่อม').length}
+    </div>
+    ${Object.entries(groups).map(([loc, items]) => `
+      <div class="section-title">📍 ${loc} (${items.length} รายการ)</div>
+      <table>
+        <thead><tr>
+          <th>ลำดับ</th><th>รหัส Jig</th><th>รูป</th><th>ชื่อ / Model</th>
+          <th>Customer</th><th>สถานะ</th><th>จำนวน</th><th>QR Code</th>
+        </tr></thead>
+        <tbody>
+          ${items.map((j,i) => `<tr>
+            <td style="text-align:center;">${i+1}</td>
+            <td><span class="jig-id">${j.id}</span></td>
+            <td class="img-td">${j.imageData?`<img src="${j.imageData}">`:'—'}</td>
+            <td><b>${j.name}</b><br><span style="font-size:11px;color:#777;">${j.model||''}</span></td>
+            <td style="text-align:center;">${j.customer||'—'}</td>
+            <td style="text-align:center;"><span class="status-cell" style="background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#888'};">${j.status}</span></td>
+            <td style="text-align:center;font-weight:bold;font-size:15px;">${j.qty||1}</td>
+            <td class="qr-td"><div id="dqr-${j.id}"></div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`).join('')}`;
+  }
+
+  const pa = document.getElementById('print-area');
+  pa.innerHTML = bodyContent;
+  document.querySelector('.app').style.display = 'none';
+  pa.style.display = 'block';
+
+  // Generate QR codes
+  setTimeout(() => {
+    printJigs.forEach(j => {
+      const qrText = `JIG:${j.id}:${j.name}`;
+      const prefix = mode === 'label' ? 'lqr-' : 'dqr-';
+      const el = document.getElementById(`${prefix}${j.id}`);
+      if(el) {
+        try { new QRCode(el, { text:qrText, width:mode==='label'?45:55, height:mode==='label'?45:55, colorLight:'#ffffff', colorDark:'#000000' }); }
+        catch(e) {}
+      }
+    });
+  }, 400);
+}
 
   const pa = document.getElementById('print-area');
   pa.innerHTML = `
@@ -1374,18 +1546,6 @@ window.printLabels = function() {
         </table>
       </div>`).join('')}`;
 
-  document.querySelector('.app').style.display = 'none';
-  pa.style.display = 'block';
-
-  // Generate QR codes after render
-  setTimeout(()=>{
-    printJigs.forEach(j=>{
-      const el = document.getElementById(`pqr-${j.id}`);
-      if(el) new QRCode(el, { text:`JIG:${j.id}:${j.name}`, width:60, height:60, colorLight:'#ffffff', colorDark:'#000000' });
-    });
-  }, 300);
-}
-
 window.downloadExcelFromPrint = function() {
   const exportJigs = window._lastPrintJigs || [];
   if(!exportJigs.length) { alert('ไม่พบข้อมูล กรุณาสั่งปริ้นก่อนครับ'); return; }
@@ -1399,65 +1559,94 @@ window.downloadExcel = function() {
   _doExcelDownload(exportJigs);
 }
 
-function _doExcelDownload(exportJigs) {
+function generateQRDataURL(text, size) {
+  return new Promise(resolve => {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(div);
+    try {
+      new QRCode(div, { text, width:size, height:size, colorLight:'#ffffff', colorDark:'#000000' });
+      setTimeout(() => {
+        const img = div.querySelector('img');
+        const canvas = div.querySelector('canvas');
+        let src = '';
+        if(img && img.src) src = img.src;
+        else if(canvas) src = canvas.toDataURL();
+        document.body.removeChild(div);
+        resolve(src);
+      }, 200);
+    } catch(e) { document.body.removeChild(div); resolve(''); }
+  });
+}
+
+async function _doExcelDownload(exportJigs) {
   const groups = {};
   exportJigs.forEach(j=>{ const loc=j.loc||'ไม่ระบุ'; if(!groups[loc]) groups[loc]=[]; groups[loc].push(j); });
 
-  // Build HTML table for Excel
   const date = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
+  const logoEl = document.querySelector('.header img');
+  const logoSrc = logoEl ? logoEl.src : '';
+
+  // Generate QR for all jigs first
+  const qrMap = {};
+  for(const j of exportJigs) {
+    qrMap[j.id] = await generateQRDataURL(`JIG:${j.id}:${j.name}`, 80);
+  }
+
+  const sColor={'พร้อมใช้':'#006b3c','ถูกยืม':'#7c4000','รอซ่อม':'#8b0000','เลิกใช้':'#555'};
+  const sBg={'พร้อมใช้':'#e8f8f0','ถูกยืม':'#fff3e0','รอซ่อม':'#fdecea','เลิกใช้':'#f5f5f5'};
+
   let tableRows = '';
-  let rowNum = 1;
   Object.entries(groups).forEach(([loc, items]) => {
-    // Section header row
-    tableRows += `<tr>
-      <td colspan="7" style="background:#b8ddf0;text-align:center;font-weight:bold;font-size:14px;border:1px solid #000;padding:6px;">${loc}</td>
-    </tr>
-    <tr style="background:#daeaf7;font-weight:bold;text-align:center;">
-      <td style="border:1px solid #000;padding:6px;">ลำดับ</td>
-      <td style="border:1px solid #000;padding:6px;">รหัส Jig</td>
-      <td style="border:1px solid #000;padding:6px;">Model</td>
-      <td style="border:1px solid #000;padding:6px;">ชื่อ Jig</td>
-      <td style="border:1px solid #000;padding:6px;">Customer</td>
-      <td style="border:1px solid #000;padding:6px;">สถานะ</td>
-      <td style="border:1px solid #000;padding:6px;">จำนวน (ชิ้น)</td>
+    tableRows += `
+    <tr><td colspan="8" style="background:#1a1d26;color:#fff;text-align:center;font-weight:bold;font-size:14px;border:2px solid #1a1d26;padding:8px;">📍 ${loc} (${items.length} รายการ)</td></tr>
+    <tr style="background:#b8ddf0;font-weight:bold;text-align:center;">
+      <td style="border:1px solid #7ab8d8;padding:6px;">ลำดับ</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">รหัส Jig</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">รูปภาพ</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">ชื่อ Jig</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">Model</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">Customer</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">สถานะ</td>
+      <td style="border:1px solid #7ab8d8;padding:6px;">QR Code</td>
     </tr>`;
     items.forEach((j, i) => {
-      const statusColor = j.status==='พร้อมใช้'?'#e0f5ef':j.status==='ถูกยืม'?'#fff0eb':j.status==='รอซ่อม'?'#ffeaea':'#f5f5f5';
       tableRows += `<tr>
         <td style="border:1px solid #ccc;padding:6px;text-align:center;">${i+1}</td>
-        <td style="border:1px solid #ccc;padding:6px;font-family:monospace;font-weight:bold;color:#00b894;">${j.id}</td>
-        <td style="border:1px solid #ccc;padding:6px;">${j.model||'-'}</td>
+        <td style="border:1px solid #ccc;padding:6px;font-family:monospace;font-weight:bold;color:#0077aa;">${j.id}</td>
+        <td style="border:1px solid #ccc;padding:4px;text-align:center;">${j.imageData?`<img src="${j.imageData}" width="50" height="50" style="object-fit:cover;border-radius:4px;">`:'—'}</td>
         <td style="border:1px solid #ccc;padding:6px;font-weight:500;">${j.name}</td>
-        <td style="border:1px solid #ccc;padding:6px;">${j.customer||'-'}</td>
-        <td style="border:1px solid #ccc;padding:6px;text-align:center;background:${statusColor};">${j.status}</td>
-        <td style="border:1px solid #ccc;padding:6px;text-align:center;font-weight:bold;">${j.qty||1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${j.model||'—'}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:center;">${j.customer||'—'}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:center;background:${sBg[j.status]||'#eee'};color:${sColor[j.status]||'#555'};font-weight:bold;">${j.status}</td>
+        <td style="border:1px solid #ccc;padding:4px;text-align:center;">${qrMap[j.id]?`<img src="${qrMap[j.id]}" width="70" height="70">`:'—'}</td>
       </tr>`;
     });
-    // Empty row separator
-    tableRows += `<tr><td colspan="7" style="padding:4px;border:none;"></td></tr>`;
+    tableRows += `<tr><td colspan="8" style="padding:6px;border:none;"></td></tr>`;
   });
 
   const html = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="UTF-8">
     <style>
-      body { font-family: 'TH SarabunIT๙', 'TH Sarabun New', Arial, sans-serif; font-size:13px; }
-      table { border-collapse: collapse; width: 100%; }
+      body { font-family: 'TH SarabunIT๙','TH Sarabun New',Arial,sans-serif; font-size:13px; }
+      table { border-collapse:collapse; width:100%; }
     </style>
     </head>
     <body>
       <table>
         <tr>
-          <td colspan="7" style="text-align:center;font-size:20px;font-weight:bold;padding:12px;border-bottom:3px solid #000;">
-            LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)
+          <td colspan="8" style="padding:12px;border-bottom:3px solid #1a1d26;">
+            ${logoSrc?`<img src="${logoSrc}" height="40" style="vertical-align:middle;margin-right:12px;">`:''}
+            <span style="font-size:18px;font-weight:bold;vertical-align:middle;">LIST JIG — บริษัท เอฟวัน ไทย จำกัด (FONE THAI CO., LTD.)</span>
           </td>
         </tr>
         <tr>
-          <td colspan="7" style="text-align:center;font-size:12px;color:#666;padding:4px 0 12px;border-bottom:1px solid #ccc;">
-            วันที่ออกรายงาน: ${date} · จำนวน Jig ทั้งหมด: ${exportJigs.length} รายการ
+          <td colspan="8" style="font-size:11px;color:#666;padding:4px 0 12px;border-bottom:1px solid #ccc;">
+            📅 วันที่ออกรายงาน: ${date} &nbsp;|&nbsp; จำนวน Jig: ${exportJigs.length} รายการ
           </td>
         </tr>
-        <tr><td colspan="7" style="padding:6px;border:none;"></td></tr>
+        <tr><td colspan="8" style="padding:6px;border:none;"></td></tr>
         ${tableRows}
       </table>
     </body></html>`;
@@ -1470,7 +1659,6 @@ function _doExcelDownload(exportJigs) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 // ====== LANGUAGE SYSTEM ======
 const LANGS = {
   th: {
