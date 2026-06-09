@@ -1081,6 +1081,70 @@ window.openDetail = function(jigId) {
   document.getElementById('modal-detail').classList.add('open');
 }
 
+
+// Full language setter (called via window.setLang -> window._setLangFull)
+window._setLangFull = function(lang) {
+  window.currentLang = lang;
+  const L = LANGS[lang] || LANGS['th'];
+  
+  // Update header flag/label (already done by outer setLang)
+  const flagEl = document.getElementById('lang-flag');
+  const labelEl = document.getElementById('lang-label');
+  if(flagEl) flagEl.textContent = L.flag;
+  if(labelEl) labelEl.textContent = L.label;
+
+  // Desktop nav
+  const navLabels = {
+    th:['🏠 หน้าหลัก','🔍 ค้นหา Jig','📋 ทะเบียน Jig','🔄 Check-in/Out','📜 ประวัติ','🖨️ ปริ้น'],
+    ko:['🏠 홈','🔍 검색','📋 지그 목록','🔄 대여/반납','📜 이력','🖨️ 인쇄'],
+    my:['🏠 ပင်မ','🔍 ရှာဖွေ','📋 မှတ်တမ်း','🔄 ချေး/ပြန်','📜 မှတ်တမ်း','🖨️ ပရင့်'],
+    en:['🏠 Home','🔍 Search','📋 Jig List','🔄 Check-in/Out','📜 History','🖨️ Print']
+  };
+  document.querySelectorAll('.header-nav .nav-btn').forEach((btn,i) => { if(navLabels[lang]?.[i]) btn.textContent = navLabels[lang][i]; });
+
+  // Bottom nav
+  const bnIcons = ['🏠','🔍','🔄','📋','⋯'];
+  const bnLabels = {
+    th:['หน้าหลัก','ค้นหา','ยืม/คืน','ทะเบียน','เพิ่มเติม'],
+    ko:['홈','검색','대여/반납','목록','더보기'],
+    my:['ပင်မ','ရှာ','ချေး/ပြန်','မှတ်တမ်း','နောက်ထပ်'],
+    en:['Home','Search','Borrow/Return','Registry','More']
+  };
+  document.querySelectorAll('.bnav-btn').forEach((btn,i) => {
+    btn.innerHTML = `<span class="bnav-icon">${bnIcons[i]||''}</span>${bnLabels[lang]?.[i]||''}`;
+  });
+
+  // Stat cards
+  const slArr = [L.ready, L.borrowed, L.repair, 'Total'];
+  const ssArr = [L.readyLabel, L.borrowedLabel, L.repairLabel, L.totalLabel];
+  document.querySelectorAll('.stat-card-label').forEach((el,i) => { if(slArr[i]) el.textContent = slArr[i]; });
+  document.querySelectorAll('.stat-card-sub').forEach((el,i) => { if(ssArr[i]) el.textContent = ssArr[i]; });
+
+  // Search
+  const searchInput = document.getElementById('search-big-input');
+  if(searchInput) searchInput.placeholder = L.searchPlaceholder;
+  const sfStatus = document.getElementById('search-filter-s');
+  if(sfStatus) {
+    const cur = sfStatus.value;
+    sfStatus.innerHTML = `<option value="">${L.allStatus}</option><option value="พร้อมใช้">${L.ready}</option><option value="ถูกยืม">${L.borrowed}</option><option value="รอซ่อม">${L.repair}</option>`;
+    sfStatus.value = cur;
+  }
+
+  // History tabs
+  const tabLabels = {
+    th:['ทั้งหมด','ยืมออก','คืน','แจ้งซ่อม'],
+    ko:['전체','대여','반납','수리 신청'],
+    my:['အားလုံး','ချေးယူ','ပြန်ပေး','ပြင်ဆင်တင်'],
+    en:['All','Borrowed','Returned','Repair']
+  };
+  document.querySelectorAll('#page-history .tab-btn').forEach((btn,i) => { if(tabLabels[lang]?.[i]) btn.textContent = tabLabels[lang][i]; });
+
+  renderSearchCards();
+  renderDashboard();
+  renderTable();
+  try { renderHistory(); } catch(e) {}
+};
+
 const EDIT_PIN = 'FONE';
 let _pinUnlocked = false;
 let _pinTimer = null;
@@ -1631,181 +1695,6 @@ const LANGS = {
 
 let currentLang = 'th';
 
-window.toggleLangMenu = function() {
-  const menu = document.getElementById('lang-menu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-  // close on outside click
-  setTimeout(() => {
-    document.addEventListener('click', function closeLang(e) {
-      if(!e.target.closest('#lang-btn') && !e.target.closest('#lang-menu')) {
-        document.getElementById('lang-menu').style.display = 'none';
-        document.removeEventListener('click', closeLang);
-      }
-    });
-  }, 50);
-}
-
-window.setLang = function(lang) {
-  currentLang = lang;
-  const L = LANGS[lang];
-  document.getElementById('lang-flag').textContent = L.flag;
-  document.getElementById('lang-label').textContent = L.label;
-  document.getElementById('lang-menu').style.display = 'none';
-
-  // ---- Desktop nav ----
-  const navBtns = document.querySelectorAll('.header-nav .nav-btn');
-  const navLabels = {
-    th:['🏠 หน้าหลัก','🔍 ค้นหา Jig','📋 ทะเบียน Jig','🔄 Check-in/Out','📜 ประวัติ','🖨️ ปริ้น'],
-    ko:['🏠 홈','🔍 검색','📋 지그 목록','🔄 대여/반납','📜 이력','🖨️ 인쇄'],
-    my:['🏠 ပင်မ','🔍 ရှာဖွေ','📋 မှတ်တမ်း','🔄 ချေး/ပြန်','📜 မှတ်တမ်း','🖨️ ပရင့်'],
-    en:['🏠 Home','🔍 Search','📋 Jig List','🔄 Check-in/Out','📜 History','🖨️ Print']
-  };
-  navBtns.forEach((btn,i) => { if(navLabels[lang]?.[i]) btn.textContent = navLabels[lang][i]; });
-
-  // ---- Bottom nav ----
-  const bnIcons = ['🏠','🔍','🔄','📋','⋯'];
-  const bnLabels = {
-    th:['หน้าหลัก','ค้นหา','ยืม/คืน','ทะเบียน','เพิ่มเติม'],
-    ko:['홈','검색','대여/반납','목록','더보기'],
-    my:['ပင်မ','ရှာ','ချေး/ပြန်','မှတ်တမ်း','နောက်ထပ်'],
-    en:['Home','Search','Borrow/Return','Registry','More']
-  };
-  document.querySelectorAll('.bnav-btn').forEach((btn,i) => {
-    btn.innerHTML = `<span class="bnav-icon">${bnIcons[i]||''}</span>${bnLabels[lang]?.[i]||''}`;
-  });
-
-  // ---- Stat cards ----
-  const slArr = [L.ready, L.borrowed, L.repair, 'Total'];
-  const ssArr = [L.readyLabel, L.borrowedLabel, L.repairLabel, L.totalLabel];
-  document.querySelectorAll('.stat-card-label').forEach((el,i) => { if(slArr[i]) el.textContent = slArr[i]; });
-  document.querySelectorAll('.stat-card-sub').forEach((el,i) => { if(ssArr[i]) el.textContent = ssArr[i]; });
-
-  // ---- Dashboard quick action buttons ----
-  const qaData = {
-    th:[['สแกน QR','ค้นหาจิ๊กด้วยกล้อง'],['ยืม / คืน Jig','Check-in / Check-out'],['เพิ่ม Jig ใหม่',''],['ปริ้น Label','']],
-    ko:[['QR 스캔','카메라로 지그 검색'],['대여 / 반납','Check-in / Check-out'],['새 지그 추가',''],['라벨 인쇄','']],
-    my:[['QR စကင်','ကင်မရာဖြင့် Jig ရှာ'],['ချေးယူ / ပြန်ပေး','Check-in / Check-out'],['Jig အသစ်ထည့်',''],['ပရင့်လေဘယ်','']],
-    en:[['Scan QR','Find jig with camera'],['Borrow / Return Jig','Check-in / Check-out'],['Add New Jig',''],['Print Label','']]
-  };
-  const qaBtns = document.querySelectorAll('#page-dashboard button[style*="flex-direction:column"]');
-  qaBtns.forEach((btn,i) => {
-    const d = qaData[lang]?.[i];
-    if(!d) return;
-    const spans = btn.querySelectorAll('span');
-    if(spans[1]) spans[1].textContent = d[0];
-    if(spans[2]) spans[2].textContent = d[1];
-  });
-
-  // ---- Dashboard panel titles ----
-  const panels = document.querySelectorAll('#page-dashboard .panel-title');
-  const pTitles = {
-    th:['กิจกรรมล่าสุด','สรุปสถานะ'],
-    ko:['최근 활동','상태 요약'],
-    my:['နောက်ဆုံးလုပ်ဆောင်ချက်','အခြေအနေ အကျဉ်းချုပ်'],
-    en:['Recent Activity','Status Summary']
-  };
-  panels.forEach((el,i) => { if(pTitles[lang]?.[i]) el.textContent = pTitles[lang][i]; });
-
-  // ---- Jig registry toolbar ----
-  const searchBox = document.querySelector('#page-jigslist .search-box');
-  if(searchBox) {
-    const ph = {th:'ค้นหา รหัส / ชื่อ / รุ่น...',ko:'코드 / 이름 / 모델 검색...',my:'ကုဒ် / အမည် / မော်ဒယ် ရှာ...',en:'Search code / name / model...'};
-    searchBox.placeholder = ph[lang];
-  }
-  const addBtn = document.querySelector('#page-jigslist .btn-primary');
-  if(addBtn) { const t={th:'+ เพิ่ม Jig ใหม่',ko:'+ 새 지그 추가',my:'+ Jig အသစ်ထည့်',en:'+ Add New Jig'}; addBtn.textContent = t[lang]; }
-  const importBtn = document.querySelector('#page-jigslist .btn-sec');
-  if(importBtn) { const t={th:'📥 Import จากรายการ',ko:'📥 목록에서 가져오기',my:'📥 စာရင်းမှ တင်သွင်း',en:'📥 Import from list'}; importBtn.textContent = t[lang]; }
-
-  // Filter selects in registry
-  const filterStatus = document.getElementById('filter-status');
-  if(filterStatus) {
-    const cur = filterStatus.value;
-    filterStatus.innerHTML = `<option value="">${L.allStatus}</option><option value="พร้อมใช้">${L.ready}</option><option value="ถูกยืม">${L.borrowed}</option><option value="รอซ่อม">${L.repair}</option><option value="เลิกใช้">${L.retired}</option>`;
-    filterStatus.value = cur;
-  }
-  const filterCust = document.getElementById('filter-customer');
-  if(filterCust) { const first = filterCust.options[0]; if(first) first.textContent = L.allCustomer; }
-
-  // Table headers
-  const thEls = document.querySelectorAll('#page-jigslist th');
-  const thLabels = {
-    th:['รหัส Jig','ชื่อ / รุ่น','Customer','ประเภท','ตำแหน่ง','สถานะ','ผู้ถือ',''],
-    ko:['지그 코드','이름 / 모델','고객사','유형','위치','상태','사용자',''],
-    my:['Jig ကုဒ်','အမည် / မော်ဒယ်','ဖောက်သည်','အမျိုးအစား','တည်နေရာ','အခြေအနေ','ကိုင်ဆောင်သူ',''],
-    en:['Jig Code','Name / Model','Customer','Type','Location','Status','Holder','']
-  };
-  thEls.forEach((el,i) => { if(thLabels[lang]?.[i] !== undefined && thLabels[lang][i] !== '') el.textContent = thLabels[lang][i]; });
-
-  // ---- Check-in/Out page ----
-  const coScanPanel = document.querySelector('#page-checkout .panel-title');
-  if(coScanPanel) {
-    const t={th:'สแกน / เลือก Jig',ko:'스캔 / 지그 선택',my:'စကင် / Jig ရွေးချယ်',en:'Scan / Select Jig'};
-    coScanPanel.textContent = t[lang];
-  }
-  const coScanTxt = document.querySelector('#page-checkout .scan-area div:nth-child(2)');
-  if(coScanTxt) { const t={th:'แตะเพื่อเปิดกล้องสแกน QR Code',ko:'탭하여 QR 코드 스캔',my:'QR ကုဒ် စကင်ရန် နှိပ်ပါ',en:'Tap to scan QR Code'}; coScanTxt.textContent = t[lang]; }
-  const coScanHint = document.querySelector('#page-checkout .scan-area div:nth-child(3)');
-  if(coScanHint) { const t={th:'หรือเลือก Jig จากรายการด้านล่าง',ko:'또는 아래 목록에서 지그 선택',my:'သို့မဟုတ် အောက်စာရင်းမှ Jig ရွေးပါ',en:'Or select Jig from list below'}; coScanHint.textContent = t[lang]; }
-  const coListHint = document.querySelector('#page-checkout [style*="คลิกเพื่อดำเนินการ"], #page-checkout [style*="클릭하여"], #page-checkout [style*="နှိပ်"], #page-checkout [style*="Click"]');
-  if(coListHint) { const t={th:'หรือเลือก Jig จากรายการ (คลิกเพื่อดำเนินการ)',ko:'목록에서 지그를 선택하세요',my:'စာရင်းမှ Jig ရွေးပါ (နှိပ်ပါ)',en:'Or select Jig from list (click to proceed)'}; coListHint.textContent = t[lang]; }
-  const coActionPanel = document.querySelectorAll('#page-checkout .panel-title');
-  if(coActionPanel[1]) { const t={th:'ดำเนินการ',ko:'작업',my:'ဆောင်ရွက်မှု',en:'Action'}; coActionPanel[1].textContent = t[lang]; }
-  const coPlaceholder = document.getElementById('co-placeholder');
-  if(coPlaceholder) { const t={th:'เลือก Jig เพื่อดำเนินการ',ko:'지그를 선택하세요',my:'Jig ရွေးချယ်ပါ',en:'Select a Jig to proceed'}; coPlaceholder.textContent = t[lang]; }
-
-  // ---- History tabs ----
-  const tabBtns = document.querySelectorAll('#page-history .tab-btn');
-  const tabLabels = {
-    th:['ทั้งหมด','ยืมออก','คืน','แจ้งซ่อม'],
-    ko:['전체','대여','반납','수리 신청'],
-    my:['အားလုံး','ချေးယူ','ပြန်ပေး','ပြင်ဆင်တင်'],
-    en:['All','Borrowed','Returned','Repair']
-  };
-  tabBtns.forEach((btn,i) => { if(tabLabels[lang]?.[i]) btn.textContent = tabLabels[lang][i]; });
-
-  // History table headers
-  const histTh = document.querySelectorAll('#page-history th');
-  const histHeaders = {
-    th:['เวลา','รหัส Jig','ชื่อ Jig','กิจกรรม','ผู้ดำเนินการ','หมายเหตุ'],
-    ko:['시간','지그 코드','지그 이름','활동','담당자','비고'],
-    my:['အချိန်','Jig ကုဒ်','Jig အမည်','လုပ်ဆောင်ချက်','ဆောင်ရွက်သူ','မှတ်ချက်'],
-    en:['Time','Jig Code','Jig Name','Activity','Operator','Note']
-  };
-  histTh.forEach((el,i) => { if(histHeaders[lang]?.[i]) el.textContent = histHeaders[lang][i]; });
-
-  // ---- Print page ----
-  const printTitle = document.querySelector('#page-printlabel .panel-title');
-  if(printTitle) { const t={th:'เลือก Jig ที่ต้องการปริ้น / ดาวน์โหลด',ko:'인쇄 / 다운로드할 지그 선택',my:'ပရင့် / ဒေါင်းလုဒ် Jig ရွေးပါ',en:'Select Jig to Print / Download'}; printTitle.textContent = t[lang]; }
-  const selectAllBtn = document.querySelector('#page-printlabel .btn-sec');
-  if(selectAllBtn) { const t={th:'เลือกทั้งหมด',ko:'전체 선택',my:'အားလုံး ရွေး',en:'Select All'}; selectAllBtn.textContent = t[lang]; }
-  const dlBtn = document.querySelector('#page-printlabel button[onclick*="downloadExcel"]');
-  if(dlBtn) { const t={th:'📊 ดาวน์โหลด Excel',ko:'📊 엑셀 다운로드',my:'📊 Excel ဒေါင်းလုဒ်',en:'📊 Download Excel'}; dlBtn.textContent = t[lang]; }
-  const printBtn = document.querySelector('#page-printlabel .btn-primary');
-  if(printBtn) { const t={th:'🖨️ สั่งปริ้น',ko:'🖨️ 인쇄',my:'🖨️ ပရင့်',en:'🖨️ Print'}; printBtn.textContent = t[lang]; }
-
-  // ---- Search page ----
-  const searchInput = document.getElementById('search-big-input');
-  if(searchInput) searchInput.placeholder = L.searchPlaceholder;
-  const sfStatus = document.getElementById('search-filter-s');
-  if(sfStatus) {
-    const cur = sfStatus.value;
-    sfStatus.innerHTML = `<option value="">${L.allStatus}</option><option value="พร้อมใช้">${L.ready}</option><option value="ถูกยืม">${L.borrowed}</option><option value="รอซ่อม">${L.repair}</option>`;
-    sfStatus.value = cur;
-  }
-  const sfCust = document.getElementById('search-filter-customer');
-  if(sfCust) { const first = sfCust.options[0]; if(first) first.textContent = L.allCustomer; }
-
-  // ---- Loading text ----
-  const loadText = document.querySelector('.loading-text');
-  if(loadText) loadText.textContent = L.connectingText;
-
-  // Re-render
-  renderSearchCards();
-  renderDashboard();
-  renderTable();
-  renderHistory();
-}
 
 // Override requirePin to use current language
 window.requirePin = function(callback) {
@@ -2047,6 +1936,51 @@ window._doExcelDownload = async function(exportJigs) {
   } catch(e) {
     console.error(e);
     alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+};
+</script>
+
+
+<script>
+// ====== LANGUAGE FUNCTIONS (outside module) ======
+const LANGS_DATA = {
+  th: { flag:'🇹🇭', label:'ไทย' },
+  ko: { flag:'🇰🇷', label:'한국어' },
+  my: { flag:'🇲🇲', label:'မြန်မာ' },
+  en: { flag:'🇬🇧', label:'English' }
+};
+
+window.toggleLangMenu = function() {
+  const menu = document.getElementById('lang-menu');
+  if(!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  if(menu.style.display === 'block') {
+    setTimeout(() => {
+      document.addEventListener('click', function closeLang(e) {
+        if(!e.target.closest('#lang-btn') && !e.target.closest('#lang-menu')) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeLang);
+        }
+      });
+    }, 50);
+  }
+};
+
+window.setLang = function(lang) {
+  // Update flag and label in header
+  const flagEl = document.getElementById('lang-flag');
+  const labelEl = document.getElementById('lang-label');
+  const menu = document.getElementById('lang-menu');
+  if(flagEl) flagEl.textContent = LANGS_DATA[lang]?.flag || '🌐';
+  if(labelEl) labelEl.textContent = LANGS_DATA[lang]?.label || lang;
+  if(menu) menu.style.display = 'none';
+  
+  // Call the module's setLang if available
+  if(window._setLangFull) {
+    window._setLangFull(lang);
+  } else {
+    // Fallback: store and apply when ready
+    window._pendingLang = lang;
   }
 };
 </script>
