@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -926,13 +927,29 @@ window.setBottomActive = function(id) {
   if(id) { const el=document.getElementById(id); if(el) el.classList.add('active'); }
 }
 
-// Dashboard date
-try {
-  const days=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-  const n=new Date();
-  const ddEl=document.getElementById('dash-date');
-  if(ddEl) ddEl.textContent=`วัน${days[n.getDay()]}ที่ ${n.getDate()}/${n.getMonth()+1}/${n.getFullYear()+543}`;
-} catch(e) {}
+// Dashboard date (re-rendered on language change)
+window.renderDashDate = function() {
+  try {
+    const DAY = {
+      th:['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'],
+      ko:['일','월','화','수','목','금','토'],
+      my:['တနင်္ဂနွေ','တနင်္လာ','အင်္ဂါ','ဗုဒ္ဓဟူး','ကြာသပတေး','သောကြာ','စနေ'],
+      en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+    };
+    const lang = window.currentLang || 'th';
+    const n = new Date();
+    const dow = n.getDay(), d = n.getDate(), mo = n.getMonth()+1, y = n.getFullYear();
+    const dn = (DAY[lang] || DAY.th)[dow];
+    let s;
+    if(lang==='th') s = `วัน${dn}ที่ ${d}/${mo}/${y+543}`;
+    else if(lang==='ko') s = `${y}년 ${mo}월 ${d}일 (${dn})`;
+    else if(lang==='en') s = `${dn}, ${d}/${mo}/${y}`;
+    else s = `${d}/${mo}/${y} (${dn})`;
+    const ddEl = document.getElementById('dash-date');
+    if(ddEl) ddEl.textContent = s;
+  } catch(e) {}
+};
+window.renderDashDate();
 
 window.openAddModal = function() {
   ['f-id','f-name','f-customer','f-model','f-spec','f-loc'].forEach(x=>document.getElementById(x).value='');
@@ -1161,6 +1178,7 @@ window._setLangFull = function(lang) {
   renderDashboard();
   renderTable();
   try { renderHistory(); } catch(e) {}
+  try { renderDashDate(); } catch(e) {}
 };
 
 const EDIT_PIN = 'FONE';
