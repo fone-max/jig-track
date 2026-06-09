@@ -700,23 +700,30 @@ onSnapshot(query(collection(db, 'history'), orderBy('timestamp', 'desc'), limit(
   renderHistory();
 }, (err) => { console.error(err); });
 
+// ====== i18n helpers (Phase 2 — dynamic JS strings) ======
+function t(k){ const L=(window.LANGS||{})[window.currentLang]||(window.LANGS||{}).th||{}; return L[k]!=null?L[k]:k; }
+const _STATUS_KEY={'พร้อมใช้':'ready','ถูกยืม':'borrowed','รอซ่อม':'repair','เลิกใช้':'retired'};
+function statusLabel(s){ return _STATUS_KEY[s]?t(_STATUS_KEY[s]):s; }
+const _ACTION_KEY={checkout:'checkoutLabel',checkin:'checkin',repair:'repairLog',add:'added',edit:'added','delete':'added'};
+function actionLabel(a){ return _ACTION_KEY[a]?t(_ACTION_KEY[a]):t('added'); }
+
 function statusBadge(s) {
   const map = { 'พร้อมใช้':'badge-green','ถูกยืม':'badge-warn','รอซ่อม':'badge-danger','เลิกใช้':'badge-gray' };
-  return `<span class="badge ${map[s]||'badge-gray'}">${s}</span>`;
+  return `<span class="badge ${map[s]||'badge-gray'}">${statusLabel(s)}</span>`;
 }
 function actionBadge(a) {
-  if(a==='checkout') return '<span class="badge badge-warn">ยืมออก</span>';
-  if(a==='checkin') return '<span class="badge badge-green">คืน</span>';
-  if(a==='repair') return '<span class="badge badge-danger">แจ้งซ่อม</span>';
-  return '<span class="badge badge-gray">เพิ่มเข้าระบบ</span>';
+  if(a==='checkout') return `<span class="badge badge-warn">${t('checkoutLabel')}</span>`;
+  if(a==='checkin') return `<span class="badge badge-green">${t('checkin')}</span>`;
+  if(a==='repair') return `<span class="badge badge-danger">${t('repairLog')}</span>`;
+  return `<span class="badge badge-gray">${t('added')}</span>`;
 }
 function formatTime(ts) {
   if(!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
-  const t = d.toLocaleTimeString('th', {hour:'2-digit', minute:'2-digit'});
-  return isToday ? `วันนี้ ${t}` : `${d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})} ${t}`;
+  const tm = d.toLocaleTimeString('th', {hour:'2-digit', minute:'2-digit'});
+  return isToday ? `${t('today')} ${tm}` : `${d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})} ${tm}`;
 }
 
 window.updateHeaderStats = function() {
@@ -740,15 +747,15 @@ window.renderDashboard = function() {
   al.innerHTML = historyData.slice(0,6).map(h=>`
     <div class="activity-item">
       <div class="act-dot" style="background:${colors[h.action]||'#888'}"></div>
-      <div class="act-text"><b>${h.jigId}</b> — ${h.action==='checkout'?'ยืมออก':h.action==='checkin'?'คืน':h.action==='repair'?'แจ้งซ่อม':'เพิ่มเข้าระบบ'} โดย ${h.actor}</div>
+      <div class="act-text"><b>${h.jigId}</b> — ${actionLabel(h.action)} ${t('byWord')} ${h.actor}</div>
       <div class="act-time">${formatTime(h.timestamp)}</div>
-    </div>`).join('') || '<div class="empty-state">ยังไม่มีกิจกรรม</div>';
+    </div>`).join('') || `<div class="empty-state">${t('noActivity')}</div>`;
   const sb = document.getElementById('status-bars');
   const statuses = [['พร้อมใช้','#00c97a'],['ถูกยืม','#ffaa00'],['รอซ่อม','#ff4444'],['เลิกใช้','#555e74']];
   sb.innerHTML = statuses.map(([s,c])=>{
     const cnt = jigs.filter(j=>j.status===s).length;
     const pct = jigs.length ? Math.round(cnt/jigs.length*100) : 0;
-    return `<div class="status-bar-item"><div class="sbi-label">${s}</div><div class="sbi-bar-wrap"><div class="sbi-bar" style="width:${pct}%;background:${c}"></div></div><div class="sbi-count">${cnt}</div></div>`;
+    return `<div class="status-bar-item"><div class="sbi-label">${statusLabel(s)}</div><div class="sbi-bar-wrap"><div class="sbi-bar" style="width:${pct}%;background:${c}"></div></div><div class="sbi-count">${cnt}</div></div>`;
   }).join('');
 }
 
@@ -762,7 +769,7 @@ window.renderTable = function() {
   const customers = [...new Set(jigs.map(j=>j.customer).filter(Boolean))].sort();
   const csel = document.getElementById('filter-customer');
   const curC = csel.value;
-  csel.innerHTML = '<option value="">Customer ทั้งหมด</option>' + customers.map(c=>`<option value="${c}"${c===curC?' selected':''}>${c}</option>`).join('');
+  csel.innerHTML = `<option value="">${t('allCustomer')}</option>` + customers.map(c=>`<option value="${c}"${c===curC?' selected':''}>${c}</option>`).join('');
 
   const filtered = jigs.filter(j=>{
     const matchQ = !q || (j.id||'').toLowerCase().includes(q) || (j.name||'').toLowerCase().includes(q) || (j.model||'').toLowerCase().includes(q) || (j.customer||'').toLowerCase().includes(q);
@@ -798,18 +805,18 @@ window.renderTable = function() {
             <div style="font-family:var(--mono);font-size:11px;color:#00b894;font-weight:700;">${j.id}</div>
             <div style="font-size:14px;font-weight:700;color:#2d3436;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.name}</div>
             <div style="font-size:11px;color:#b2bec3;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.model||''} ${j.customer?`· ${j.customer}`:''}</div>
-            <div style="font-size:12px;color:#636e72;margin-bottom:5px;">📍 ${j.loc||'ไม่ระบุ'}</div>
-            <span style="background:${sBg[j.status]||'#f5f6f8'};color:${sColor[j.status]||'#b2bec3'};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${sIcon[j.status]||''} ${j.status}</span>
+            <div style="font-size:12px;color:#636e72;margin-bottom:5px;">📍 ${j.loc||t('noLoc')}</div>
+            <span style="background:${sBg[j.status]||'#f5f6f8'};color:${sColor[j.status]||'#b2bec3'};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${sIcon[j.status]||''} ${statusLabel(j.status)}</span>
             ${j.holder?`<span style="font-size:11px;color:#b2bec3;margin-left:6px;">👤 ${j.holder}</span>`:''}
           </div>
         </div>
         <!-- Action buttons -->
         <div style="display:flex;border-top:1px solid rgba(0,0,0,0.06);">
-          <button onclick="openDetail('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#0984e3;cursor:pointer;">🔍 ดู / QR</button>
-          <button onclick="openCO('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#00b894;cursor:pointer;">${j.status==='ถูกยืม'?'↩️ คืน':'📤 ยืม'}</button>
+          <button onclick="openDetail('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#0984e3;cursor:pointer;">🔍 ${t('viewQR')}</button>
+          <button onclick="openCO('${j.id}')" style="flex:1;padding:10px;background:none;border:none;border-right:1px solid rgba(0,0,0,0.06);font-family:var(--font);font-size:13px;font-weight:600;color:#00b894;cursor:pointer;">${j.status==='ถูกยืม'?'↩️ '+t('checkin'):'📤 '+t('borrowWord')}</button>
           <button onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}') " style="flex:0.6;padding:10px;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:#d63031;cursor:pointer;">🗑️</button>
         </div>
-      </div>`).join('') : '<div style="text-align:center;padding:40px;color:#b2bec3;">ไม่พบ Jig</div>';
+      </div>`).join('') : `<div style="text-align:center;padding:40px;color:#b2bec3;">${t('noJigFound')}</div>`;
   } else {
     // Desktop: Table layout
     const cardWrap = document.getElementById('jig-card-list');
@@ -825,11 +832,11 @@ window.renderTable = function() {
         <td>${statusBadge(j.status)}</td>
         <td style="color:var(--text2);font-size:12px">${j.holder||'—'}</td>
         <td style="white-space:nowrap;display:flex;gap:6px;">
-          <button class="btn-sm" onclick="openDetail('${j.id}')">ดู / QR</button>
-          <button class="btn-sm" onclick="openCO('${j.id}')">${j.status==='ถูกยืม'?'คืน':'ยืม'}</button>
-          <button class="btn-delete" onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}')">ลบ</button>
+          <button class="btn-sm" onclick="openDetail('${j.id}')">${t('viewQR')}</button>
+          <button class="btn-sm" onclick="openCO('${j.id}')">${j.status==='ถูกยืม'?t('checkin'):t('borrowWord')}</button>
+          <button class="btn-delete" onclick="deleteJig('${j.id}','${j.name.replace(/'/g,"\\'")}')">${t('btnDelete')}</button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">ไม่พบ Jig</td></tr>';
+      </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">${t('noJigFound')}</td></tr>`;
   }
 }
 
@@ -839,7 +846,7 @@ window.renderQuickList = function() {
       <div class="quick-item-id">${j.id}</div>
       <div class="quick-item-name">${j.name}</div>
       <div style="margin-top:4px">${statusBadge(j.status)}</div>
-    </div>`).join('') || '<div style="color:var(--text3);font-size:12px;padding:10px">ยังไม่มี Jig ในระบบ</div>';
+    </div>`).join('') || `<div style="color:var(--text3);font-size:12px;padding:10px">${t('noJigYet')}</div>`;
 }
 
 window.renderHistory = function() {
@@ -852,7 +859,7 @@ window.renderHistory = function() {
       <td>${actionBadge(h.action)}</td>
       <td style="font-size:12px">${h.actor||''}</td>
       <td style="font-size:12px;color:var(--text3)">${h.note||'—'}</td>
-    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:30px">ไม่มีประวัติ</td></tr>';
+    </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:30px">${t('noHistory')}</td></tr>`;
 }
 
 window.showPage = function(id, btn) {
@@ -874,7 +881,7 @@ window.deleteJig = async function(jigId, jigName) {
     try {
       await deleteDoc(doc(db,'jigs',jigId));
       await addDoc(collection(db,'history'),{ jigId, jigName, action:'delete', actor:'ผู้ใช้ระบบ', note:'ลบออกจากระบบ', timestamp:serverTimestamp() });
-    } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+    } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
   });
 }
 
@@ -884,13 +891,13 @@ window.renderSearchCards = function() {
   const fc = document.getElementById('search-filter-customer')?.value||'';
   const customers = [...new Set(jigs.map(j=>j.customer).filter(Boolean))].sort();
   const csel = document.getElementById('search-filter-customer');
-  if(csel) { const cur=csel.value; csel.innerHTML='<option value="">Customer ทั้งหมด</option>'+customers.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join(''); }
+  if(csel) { const cur=csel.value; csel.innerHTML=`<option value="">${t('allCustomer')}</option>`+customers.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join(''); }
   const filtered = jigs.filter(j=>{
     const matchQ = !q||(j.id||'').toLowerCase().includes(q)||(j.name||'').toLowerCase().includes(q)||(j.model||'').toLowerCase().includes(q)||(j.customer||'').toLowerCase().includes(q)||(j.loc||'').toLowerCase().includes(q);
     return matchQ&&(!fs||j.status===fs)&&(!fc||j.customer===fc);
   });
   const sc = document.getElementById('search-count');
-  if(sc) sc.textContent = `พบ ${filtered.length} รายการ`;
+  if(sc) sc.textContent = `${t('found')} ${filtered.length} ${t('items')}`;
   const sColor={'พร้อมใช้':'#00b894','ถูกยืม':'#e17055','รอซ่อม':'#d63031','เลิกใช้':'#b2bec3'};
   const sBg={'พร้อมใช้':'#e0f5ef','ถูกยืม':'#fff0eb','รอซ่อม':'#ffeaea','เลิกใช้':'#f5f6f8'};
   const sIcon={'พร้อมใช้':'✅','ถูกยืม':'🔶','รอซ่อม':'🔧','เลิกใช้':'⛔'};
@@ -905,13 +912,13 @@ window.renderSearchCards = function() {
         <div style="font-family:var(--mono);font-size:11px;color:#00b894;font-weight:700;">${j.id}</div>
         <div style="font-size:14px;font-weight:700;color:#2d3436;margin:2px 0 3px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.name}</div>
         <div style="font-size:11px;color:#b2bec3;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.model||''} ${j.customer?`· <b style="color:#636e72">${j.customer}</b>`:''}</div>
-        <div style="font-size:12px;color:#636e72;margin-bottom:7px;display:flex;align-items:center;gap:4px;"><span>📍</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.loc||'ไม่ระบุตำแหน่ง'}</span></div>
+        <div style="font-size:12px;color:#636e72;margin-bottom:7px;display:flex;align-items:center;gap:4px;"><span>📍</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.loc||t('noLocFull')}</span></div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="background:${sBg[j.status]||'#f5f6f8'};color:${sColor[j.status]||'#b2bec3'};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;">${sIcon[j.status]||''} ${j.status}</span>
+          <span style="background:${sBg[j.status]||'#f5f6f8'};color:${sColor[j.status]||'#b2bec3'};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;">${sIcon[j.status]||''} ${statusLabel(j.status)}</span>
           ${j.holder?`<span style="font-size:10px;color:#b2bec3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 ${j.holder}</span>`:''}
         </div>
       </div>
-    </div>`).join('') : `<div style="text-align:center;padding:60px 24px;color:#b2bec3;"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div>ไม่พบ Jig ที่ตรงกัน</div></div>`;
+    </div>`).join('') : `<div style="text-align:center;padding:60px 24px;color:#b2bec3;"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div>${t('noMatch')}</div></div>`;
 }
 
 window.setBottomActive = function(id) {
@@ -960,7 +967,7 @@ window.addJig = async function() {
     window._pendingImageData = '';
     closeModal('modal-add');
     openDetail(id);
-  } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+  } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
 }
 
 function compressImage(file, callback) {
@@ -1012,7 +1019,7 @@ window.updateJigImage = async function(input) {
     try {
       await updateDoc(doc(db,'jigs',jigId), { imageData: data });
       alert('✅ อัปเดตรูปภาพเรียบร้อย');
-    } catch(err) { alert('เกิดข้อผิดพลาด: '+err.message); setSyncStatus('live'); }
+    } catch(err) { alert(t('alertErr')+err.message); setSyncStatus('live'); }
   });
 }
 
@@ -1024,7 +1031,7 @@ window.openDetail = function(jigId) {
   // Reset to view mode
   document.getElementById('md-view-mode').style.display = 'block';
   document.getElementById('md-edit-mode').style.display = 'none';
-  document.getElementById('md-edit-btn').textContent = '✏️ แก้ไข';
+  document.getElementById('md-edit-btn').textContent = t('btnEdit');
 
   document.getElementById('md-title').childNodes[0].textContent = `${j.id} — ${j.name} `;
 
@@ -1039,7 +1046,7 @@ window.openDetail = function(jigId) {
   }
 
   // Location box
-  document.getElementById('md-loc-text').textContent = j.loc || 'ไม่ระบุตำแหน่ง';
+  document.getElementById('md-loc-text').textContent = j.loc || t('noLocFull');
 
   // Status box with color
   const statusConfig = {
@@ -1053,15 +1060,15 @@ window.openDetail = function(jigId) {
   sb.style.cssText = `background:${sc.bg};border:1px solid ${sc.border};border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;`;
   document.getElementById('md-status-icon').textContent = sc.icon;
   document.getElementById('md-status-text').style.color = sc.color;
-  document.getElementById('md-status-text').textContent = j.status;
-  document.getElementById('md-holder-text').textContent = j.holder ? `ผู้ถือ: ${j.holder}` : '';
+  document.getElementById('md-status-text').textContent = statusLabel(j.status);
+  document.getElementById('md-holder-text').textContent = j.holder ? `${t('holderPrefix')} ${j.holder}` : '';
 
   document.getElementById('md-details').innerHTML = `
     <div class="detail-row"><span class="detail-key">Customer</span><span class="detail-val" style="font-weight:500;color:var(--text);">${j.customer||'—'}</span></div>
-    <div class="detail-row"><span class="detail-key">รุ่น / Model</span><span class="detail-val" style="font-family:var(--mono);color:var(--accent2);">${j.model||'—'}</span></div>
-    <div class="detail-row"><span class="detail-key">ประเภท</span><span class="detail-val"><span class="badge badge-blue">${j.type||'—'}</span></span></div>
-    <div class="detail-row"><span class="detail-key">จำนวน</span><span class="detail-val" style="font-weight:600;font-size:16px;font-family:var(--mono);">${j.qty||1} <span style="font-size:11px;color:var(--text3);font-weight:400;">ชิ้น</span></span></div>
-    <div class="detail-row"><span class="detail-key">สเปก</span><span class="detail-val" style="color:var(--text2);">${j.spec||'—'}</span></div>`;
+    <div class="detail-row"><span class="detail-key">${t('fldModel')}</span><span class="detail-val" style="font-family:var(--mono);color:var(--accent2);">${j.model||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">${t('fldType')}</span><span class="detail-val"><span class="badge badge-blue">${j.type||'—'}</span></span></div>
+    <div class="detail-row"><span class="detail-key">${t('qtyWord')}</span><span class="detail-val" style="font-weight:600;font-size:16px;font-family:var(--mono);">${j.qty||1} <span style="font-size:11px;color:var(--text3);font-weight:400;">${t('unitPcs')}</span></span></div>
+    <div class="detail-row"><span class="detail-key">${t('specWord')}</span><span class="detail-val" style="color:var(--text2);">${j.spec||'—'}</span></div>`;
 
   const qrBox = document.getElementById('md-qr');
   qrBox.innerHTML = '';
@@ -1071,9 +1078,9 @@ window.openDetail = function(jigId) {
   document.getElementById('md-history').innerHTML = jigHist.length ? jigHist.map(h=>`
     <div class="history-item">
       <div class="hist-dot" style="background:${h.action==='checkout'?'#ffaa00':h.action==='checkin'?'#00c97a':'#ff4444'}"></div>
-      <div class="hist-text">${h.action==='checkout'?'ยืมออก':h.action==='checkin'?'คืน':h.action==='repair'?'แจ้งซ่อม':'เพิ่มเข้าระบบ'} — ${h.actor} (${h.note||'—'})</div>
+      <div class="hist-text">${actionLabel(h.action)} — ${h.actor} (${h.note||'—'})</div>
       <div class="hist-time">${formatTime(h.timestamp)}</div>
-    </div>`).join('') : '<div style="font-size:12px;color:var(--text3);padding:8px 0">ยังไม่มีประวัติ</div>';
+    </div>`).join('') : `<div style="font-size:12px;color:var(--text3);padding:8px 0">${t('noHistory')}</div>`;
 
   const repBtn = document.getElementById('md-repair-btn');
   repBtn.onclick = () => { markRepair(jigId); closeModal('modal-detail'); };
@@ -1200,7 +1207,7 @@ function _doEnterEditMode() {
   document.getElementById('e-spec').value = j.spec||'';
   viewMode.style.display = 'none';
   editMode.style.display = 'block';
-  btn.textContent = '← กลับ';
+  btn.textContent = t('btnBack');
   btn.style.cssText = 'background:#f0f2f5;color:var(--text2);border:1.5px solid var(--border2);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:var(--font);';
 }
 
@@ -1208,7 +1215,7 @@ function _doExitEditMode() {
   const btn = document.getElementById('md-edit-btn');
   document.getElementById('md-view-mode').style.display = 'block';
   document.getElementById('md-edit-mode').style.display = 'none';
-  btn.textContent = '✏️ แก้ไข';
+  btn.textContent = t('btnEdit');
   btn.style.cssText = 'background:rgba(0,153,255,0.12);color:var(--accent2);border:1px solid rgba(0,153,255,0.3);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:var(--font);';
 }
 
@@ -1231,7 +1238,7 @@ window.saveEditJig = async function() {
     await addDoc(collection(db,'history'), { jigId, jigName:name, action:'edit', actor:'ผู้ใช้ระบบ', note:'แก้ไขข้อมูล', timestamp:serverTimestamp() });
     closeModal('modal-detail');
     setTimeout(()=>openDetail(jigId), 400);
-  } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+  } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
 }
 
 window.openCO = function(jigId) {
@@ -1240,22 +1247,22 @@ window.openCO = function(jigId) {
   const isReturn = j.status==='ถูกยืม';
   currentCOJig = jigId;
   currentCOAction = isReturn ? 'checkin' : 'checkout';
-  document.getElementById('co-title').innerHTML = `${isReturn?'คืน':'ยืม'} Jig <button class="modal-close" onclick="closeModal('modal-co')">×</button>`;
+  document.getElementById('co-title').innerHTML = `${isReturn?t('checkin'):t('borrowWord')} Jig <button class="modal-close" onclick="closeModal('modal-co')">×</button>`;
   document.getElementById('co-jig-info').innerHTML = `
     <div class="checkout-jig">
       ${j.imageData ? `<img src="${j.imageData}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ''}
       <div class="checkout-jig-id">${j.id}</div>
       <div class="checkout-jig-name">${j.name}</div>
       <div style="margin-top:6px;font-size:12px;color:var(--text3)">${j.model||''} · ${j.type||''} · ${j.loc||''}</div>
-      ${j.holder?`<div style="margin-top:4px;font-size:12px;color:var(--warn)">ผู้ถือปัจจุบัน: ${j.holder}</div>`:''}
+      ${j.holder?`<div style="margin-top:4px;font-size:12px;color:var(--warn)">${t('curHolder')} ${j.holder}</div>`:''}
     </div>`;
   document.getElementById('co-fields').innerHTML = isReturn ? `
-    <div class="form-group form-full"><label class="form-label">ผู้คืน</label><input class="form-input" id="co-actor" value="${j.holder||''}" placeholder="ชื่อผู้คืน"></div>
-    <div class="form-group form-full"><label class="form-label">สภาพ Jig</label><select class="form-input" id="co-condition"><option value="ปกติ">ปกติ</option><option value="ชำรุด">ชำรุด / ต้องซ่อม</option></select></div>
-    <div class="form-group form-full"><label class="form-label">หมายเหตุ</label><input class="form-input" id="co-note" placeholder="หมายเหตุ..."></div>` : `
-    <div class="form-group form-full"><label class="form-label">ชื่อผู้ยืม *</label><input class="form-input" id="co-actor" placeholder="ชื่อ-นามสกุล หรือรหัสพนักงาน"></div>
-    <div class="form-group form-full"><label class="form-label">สถานีงาน / งานที่ใช้</label><input class="form-input" id="co-note" placeholder="เช่น Line 2, Order #A301"></div>`;
-  document.getElementById('co-confirm-btn').textContent = isReturn ? 'ยืนยันการคืน' : 'ยืนยันการยืม';
+    <div class="form-group form-full"><label class="form-label">${t('coReturner')}</label><input class="form-input" id="co-actor" value="${j.holder||''}" placeholder="${t('coReturnerPh')}"></div>
+    <div class="form-group form-full"><label class="form-label">${t('coCondition')}</label><select class="form-input" id="co-condition"><option value="ปกติ">${t('condNormal')}</option><option value="ชำรุด">${t('condBroken')}</option></select></div>
+    <div class="form-group form-full"><label class="form-label">${t('thNote')}</label><input class="form-input" id="co-note" placeholder="${t('coNotePh')}"></div>` : `
+    <div class="form-group form-full"><label class="form-label">${t('coBorrower')}</label><input class="form-input" id="co-actor" placeholder="${t('coBorrowerPh')}"></div>
+    <div class="form-group form-full"><label class="form-label">${t('coStation')}</label><input class="form-input" id="co-note" placeholder="${t('coStationPh')}"></div>`;
+  document.getElementById('co-confirm-btn').textContent = isReturn ? t('coConfirmReturn') : t('coConfirmBorrow');
   document.getElementById('co-confirm-btn').onclick = confirmCO;
   document.getElementById('modal-co').classList.add('open');
 }
@@ -1275,7 +1282,7 @@ window.confirmCO = async function() {
     await addDoc(collection(db,'history'), { jigId:j.id, jigName:j.name, action:currentCOAction, actor, note, timestamp:serverTimestamp() });
     closeModal('modal-co');
     alert(currentCOAction==='checkout'?`✅ ยืม ${j.id} ให้ ${actor} เรียบร้อย`:`✅ คืน ${j.id} เรียบร้อย`);
-  } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+  } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
 }
 
 window.markRepair = async function(jigId) {
@@ -1286,7 +1293,7 @@ window.markRepair = async function(jigId) {
     await updateDoc(doc(db,'jigs',jigId), { status:'รอซ่อม', holder:'' });
     await addDoc(collection(db,'history'), { jigId, jigName:j.name, action:'repair', actor:'ผู้ใช้ระบบ', note:'แจ้งซ่อม', timestamp:serverTimestamp() });
     alert(`⚠️ แจ้งซ่อม ${jigId} เรียบร้อย`);
-  } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+  } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
 }
 
 window.filterHistory = function(type, btn) {
@@ -1362,7 +1369,7 @@ window.confirmImport = async function() {
     closeModal('modal-import');
     alert(`✅ Import เสร็จแล้ว ${count} รายการ`);
     showPage('printlabel', document.querySelector('.nav-btn:last-child'));
-  } catch(e) { alert('เกิดข้อผิดพลาด: '+e.message); setSyncStatus('live'); }
+  } catch(e) { alert(t('alertErr')+e.message); setSyncStatus('live'); }
 }
 
 // ====== PRINT LABEL ======
@@ -1664,6 +1671,16 @@ window.LANGS = {
     printSelectTitle:'เลือก Jig ที่ต้องการปริ้น / ดาวน์โหลด', allLoc:'ทุกตำแหน่ง / ชั้น', selectAll:'☑ เลือกทั้งหมด',
     labelShelf:'🏷️ Label ติดชั้น', docRecord:'📋 เอกสารเก็บบันทึก',
     importTitle:'📥 Import รายการ Jig', btnCheck:'ตรวจสอบ', btnImport:'นำเข้าระบบ', tapClose:'แตะนอกรูปเพื่อปิด',
+    today:'วันนี้', byWord:'โดย', noActivity:'ยังไม่มีกิจกรรม', noJigFound:'ไม่พบ Jig', noMatch:'ไม่พบ Jig ที่ตรงกัน',
+    noJigYet:'ยังไม่มี Jig ในระบบ', noHistory:'ไม่มีประวัติ', noData:'ไม่มีข้อมูล', noLoc:'ไม่ระบุ', noLocFull:'ไม่ระบุตำแหน่ง',
+    viewQR:'ดู / QR', borrowWord:'ยืม', btnDelete:'ลบ', btnBack:'← กลับ', holderPrefix:'ผู้ถือ:',
+    qtyWord:'จำนวน', unitPcs:'ชิ้น', specWord:'สเปก', curHolder:'ผู้ถือปัจจุบัน:',
+    coReturner:'ผู้คืน', coReturnerPh:'ชื่อผู้คืน', coCondition:'สภาพ Jig', condNormal:'ปกติ', condBroken:'ชำรุด / ต้องซ่อม',
+    coNotePh:'หมายเหตุ...', coBorrower:'ชื่อผู้ยืม *', coBorrowerPh:'ชื่อ-นามสกุล หรือรหัสพนักงาน',
+    coStation:'สถานีงาน / งานที่ใช้', coStationPh:'เช่น Line 2, Order #A301',
+    coConfirmReturn:'ยืนยันการคืน', coConfirmBorrow:'ยืนยันการยืม',
+    scanning:'กำลังสแกน...', scanFoundQR:'✅ พบ QR: ', scanNotFoundPrefix:'⚠️ ไม่พบ: ', scanNotInSysSuffix:' ในระบบ',
+    alertErr:t('alertErr'),
   },
   ko: {
     flag:'🇰🇷', label:'한국어',
@@ -1699,6 +1716,16 @@ window.LANGS = {
     printSelectTitle:'인쇄 / 다운로드할 지그 선택', allLoc:'모든 위치 / 선반', selectAll:'☑ 전체 선택',
     labelShelf:'🏷️ 선반 라벨', docRecord:'📋 기록 문서',
     importTitle:'📥 지그 목록 가져오기', btnCheck:'검토', btnImport:'시스템에 추가', tapClose:'바깥을 탭하여 닫기',
+    today:'오늘', byWord:'담당', noActivity:'활동 없음', noJigFound:'지그 없음', noMatch:'일치하는 지그 없음',
+    noJigYet:'시스템에 지그 없음', noHistory:'이력 없음', noData:'데이터 없음', noLoc:'미지정', noLocFull:'위치 미지정',
+    viewQR:'보기 / QR', borrowWord:'대여', btnDelete:'삭제', btnBack:'← 뒤로', holderPrefix:'대여자:',
+    qtyWord:'수량', unitPcs:'개', specWord:'사양', curHolder:'현재 대여자:',
+    coReturner:'반납자', coReturnerPh:'반납자 이름', coCondition:'지그 상태', condNormal:'정상', condBroken:'손상 / 수리 필요',
+    coNotePh:'비고...', coBorrower:'대여자 이름 *', coBorrowerPh:'성명 또는 사번',
+    coStation:'작업 위치 / 용도', coStationPh:'예: Line 2, Order #A301',
+    coConfirmReturn:'반납 확인', coConfirmBorrow:'대여 확인',
+    scanning:'스캔 중...', scanFoundQR:'✅ QR 발견: ', scanNotFoundPrefix:'⚠️ 없음: ', scanNotInSysSuffix:' (시스템에 없음)',
+    alertErr:'오류 발생: ',
   },
   my: {
     flag:'🇲🇲', label:'မြန်မာ',
@@ -1734,6 +1761,16 @@ window.LANGS = {
     printSelectTitle:'ပရင့်/ဒေါင်းလုဒ်ရန် Jig ရွေးပါ', allLoc:'နေရာအားလုံး', selectAll:'☑ အားလုံးရွေး',
     labelShelf:'🏷️ စင်တံဆိပ်', docRecord:'📋 မှတ်တမ်းစာရွက်',
     importTitle:'📥 Jig စာရင်း တင်သွင်း', btnCheck:'စစ်ဆေး', btnImport:'စနစ်ထဲ ထည့်', tapClose:'ပုံပြင်ပ နှိပ်၍ ပိတ်',
+    today:'ယနေ့', byWord:'မှ', noActivity:'လုပ်ဆောင်ချက် မရှိ', noJigFound:'Jig မတွေ့ပါ', noMatch:'ကိုက်ညီသော Jig မရှိ',
+    noJigYet:'စနစ်တွင် Jig မရှိသေး', noHistory:'မှတ်တမ်း မရှိ', noData:'ဒေတာ မရှိ', noLoc:'မသတ်မှတ်', noLocFull:'နေရာ မသတ်မှတ်',
+    viewQR:'ကြည့် / QR', borrowWord:'ချေး', btnDelete:'ဖျက်', btnBack:'← နောက်သို့', holderPrefix:'ကိုင်ဆောင်သူ:',
+    qtyWord:'အရေအတွက်', unitPcs:'ခု', specWord:'အသေးစိတ်', curHolder:'လက်ရှိ ကိုင်ဆောင်သူ:',
+    coReturner:'ပြန်ပေးသူ', coReturnerPh:'ပြန်ပေးသူ အမည်', coCondition:'Jig အခြေအနေ', condNormal:'ပုံမှန်', condBroken:'ပျက်စီး / ပြင်ရန်',
+    coNotePh:'မှတ်ချက်...', coBorrower:'ချေးယူသူ အမည် *', coBorrowerPh:'အမည် သို့ ဝန်ထမ်းကုဒ်',
+    coStation:'အလုပ်နေရာ / အသုံးပြုမှု', coStationPh:'ဥပမာ Line 2, Order #A301',
+    coConfirmReturn:'ပြန်ပေးခြင်း အတည်ပြု', coConfirmBorrow:'ချေးယူခြင်း အတည်ပြု',
+    scanning:'စကင်ဖတ်နေသည်...', scanFoundQR:'✅ QR တွေ့: ', scanNotFoundPrefix:'⚠️ မတွေ့: ', scanNotInSysSuffix:' စနစ်တွင်မရှိ',
+    alertErr:'အမှားဖြစ်: ',
   },
   en: {
     flag:'🇬🇧', label:'English',
@@ -1769,6 +1806,16 @@ window.LANGS = {
     printSelectTitle:'Select Jigs to print / download', allLoc:'All Locations', selectAll:'☑ Select All',
     labelShelf:'🏷️ Shelf Label', docRecord:'📋 Record Document',
     importTitle:'📥 Import Jig List', btnCheck:'Check', btnImport:'Import', tapClose:'Tap outside to close',
+    today:'Today', byWord:'by', noActivity:'No activity yet', noJigFound:'No Jig found', noMatch:'No matching Jig',
+    noJigYet:'No Jig in system yet', noHistory:'No history', noData:'No data', noLoc:'N/A', noLocFull:'No location',
+    viewQR:'View / QR', borrowWord:'Borrow', btnDelete:'Delete', btnBack:'← Back', holderPrefix:'Holder:',
+    qtyWord:'Qty', unitPcs:'pcs', specWord:'Spec', curHolder:'Current holder:',
+    coReturner:'Returner', coReturnerPh:'Returner name', coCondition:'Jig Condition', condNormal:'Normal', condBroken:'Damaged / Needs repair',
+    coNotePh:'Note...', coBorrower:'Borrower name *', coBorrowerPh:'Full name or employee ID',
+    coStation:'Station / Usage', coStationPh:'e.g. Line 2, Order #A301',
+    coConfirmReturn:'Confirm Return', coConfirmBorrow:'Confirm Borrow',
+    scanning:'Scanning...', scanFoundQR:'✅ QR found: ', scanNotFoundPrefix:'⚠️ Not found: ', scanNotInSysSuffix:' not in system',
+    alertErr:'Error: ',
   }
 };
 
@@ -1778,7 +1825,7 @@ let currentLang = 'th';
 // Override requirePin to use current language
 window.requirePin = function(callback) {
   if(_pinUnlocked) { callback(); return; }
-  const L = LANGS[currentLang];
+  const L = LANGS[window.currentLang] || LANGS[currentLang] || LANGS.th;
   const pin = prompt(L.pinPrompt);
   if(pin === null) return;
   if(pin.trim().toUpperCase() === EDIT_PIN) {
@@ -1834,7 +1881,7 @@ window.startSearchScanner = async function() {
     wrap.style.display = 'block';
     btn.textContent = '⏹';
     btn.onclick = stopSearchScanner;
-    status.textContent = 'จ่อ QR Code ของ Jig';
+    status.textContent = t('scanAim');
     searchScanFrameFn();
   } catch(e) {
     console.error('Camera error:', e);
@@ -1866,8 +1913,8 @@ function searchScanFrameFn() {
       // เด้งเปิดรายละเอียดทันที
       setTimeout(()=>openDetail(jigId), 300);
     } else {
-      status.textContent = `⚠️ ไม่พบ: ${jigId}`;
-      setTimeout(()=>{ status.textContent='จ่อ QR Code ของ Jig'; searchScanFrame=requestAnimationFrame(searchScanFrameFn); }, 1500);
+      status.textContent = `${t('scanNotFoundPrefix')}${jigId}`;
+      setTimeout(()=>{ status.textContent=t('scanAim'); searchScanFrame=requestAnimationFrame(searchScanFrameFn); }, 1500);
       return;
     }
   } else {
@@ -1905,7 +1952,7 @@ window.startScanner = async function() {
     await video.play().catch(()=>{});
     idle.style.display = 'none';
     active.style.display = 'block';
-    status.textContent = 'กำลังสแกน...';
+    status.textContent = t('scanning');
     scanFrame();
   } catch(e) {
     alert('ไม่สามารถเปิดกล้องได้ครับ\n\nกรุณาตรวจสอบ:\n1. อนุญาตกล้องใน Settings → Safari → Camera\n2. ลองกด Refresh แล้วเปิดใหม่\n3. ลองใช้ Chrome แทน Safari');
@@ -1928,7 +1975,7 @@ function scanFrame() {
   const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
   if(code) {
     const text = code.data;
-    status.textContent = '✅ พบ QR: ' + text;
+    status.textContent = t('scanFoundQR') + text;
     // รองรับ format: JIG:ID:NAME หรือ ID ตรงๆ
     let jigId = text;
     if(text.startsWith('JIG:')) {
@@ -1939,8 +1986,8 @@ function scanFrame() {
       stopScanner();
       setTimeout(() => openCO(jigId), 300);
     } else {
-      status.textContent = '⚠️ ไม่พบ Jig: ' + jigId + ' ในระบบ';
-      setTimeout(() => { status.textContent = 'กำลังสแกน...'; scanAnimFrame = requestAnimationFrame(scanFrame); }, 2000);
+      status.textContent = t('scanNotFoundPrefix') + jigId + t('scanNotInSysSuffix');
+      setTimeout(() => { status.textContent = t('scanning'); scanAnimFrame = requestAnimationFrame(scanFrame); }, 2000);
       return;
     }
   } else {
@@ -2014,7 +2061,7 @@ window._doExcelDownload = async function(exportJigs) {
     document.body.removeChild(a);
   } catch(e) {
     console.error(e);
-    alert('เกิดข้อผิดพลาด: ' + e.message);
+    alert(t('alertErr') + e.message);
   }
 };
 </script>
