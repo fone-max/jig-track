@@ -216,16 +216,16 @@ tr:hover td { background: #f8fffe; }
     <div class="hstat" style="color:rgba(0,212,170,0.8)">พร้อม <span class="hstat-num" style="color:#00d4aa" id="hs-avail">—</span></div>
     <!-- Language Switcher -->
     <div style="position:relative;margin-left:6px;">
-      <button onclick="toggleLangMenu()" id="lang-btn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:5px 10px;color:#fff;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <button onclick="window.toggleLangMenu()" id="lang-btn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:5px 10px;color:#fff;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
         <span id="lang-flag">🇹🇭</span>
         <span id="lang-label" style="font-size:11px;">ไทย</span>
         <span style="font-size:9px;opacity:0.6;">▼</span>
       </button>
       <div id="lang-menu" style="display:none;position:absolute;right:0;top:36px;background:#1a1d26;border:1px solid rgba(255,255,255,0.15);border-radius:10px;overflow:hidden;min-width:130px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-        <button onclick="setLang('th')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇹🇭 <span>ภาษาไทย</span></button>
-        <button onclick="setLang('ko')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇰🇷 <span>한국어</span></button>
-        <button onclick="setLang('my')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇲🇲 <span>မြန်မာ</span></button>
-        <button onclick="setLang('en')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇬🇧 <span>English</span></button>
+        <button onclick="window.setLang('th')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇹🇭 <span>ภาษาไทย</span></button>
+        <button onclick="window.setLang('ko')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇰🇷 <span>한국어</span></button>
+        <button onclick="window.setLang('my')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇲🇲 <span>မြန်မာ</span></button>
+        <button onclick="window.setLang('en')" class="lang-opt" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;border:none;color:#fff;font-family:var(--font);font-size:13px;cursor:pointer;text-align:left;">🇬🇧 <span>English</span></button>
       </div>
     </div>
   </div>
