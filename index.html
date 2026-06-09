@@ -1085,7 +1085,7 @@ window.openDetail = function(jigId) {
 // Full language setter (called via window.setLang -> window._setLangFull)
 window._setLangFull = function(lang) {
   window.currentLang = lang;
-  const L = LANGS[lang] || LANGS['th'];
+  const L = (window.LANGS||{})[lang] || (window.LANGS||{})['th'] || {} || LANGS['th'];
   
   // Update header flag/label (already done by outer setLang)
   const flagEl = document.getElementById('lang-flag');
@@ -1618,7 +1618,7 @@ window.printLabels = function(mode) {
 
 // ====== LANGUAGE SYSTEM ======
 
-const LANGS = {
+window.LANGS = {
   th: {
     flag:'🇹🇭', label:'ไทย',
     dashboard:'หน้าหลัก', search:'ค้นหา', registry:'ทะเบียน', checkout:'ยืม/คืน', more:'เพิ่มเติม', print:'ปริ้น',
@@ -1971,17 +1971,20 @@ window.setLang = function(lang) {
   const flagEl = document.getElementById('lang-flag');
   const labelEl = document.getElementById('lang-label');
   const menu = document.getElementById('lang-menu');
-  if(flagEl) flagEl.textContent = LANGS_DATA[lang]?.flag || '🌐';
-  if(labelEl) labelEl.textContent = LANGS_DATA[lang]?.label || lang;
+  if(flagEl) flagEl.textContent = window.LANGS?.[lang]?.flag || LANGS_DATA[lang]?.flag || '🌐';
+  if(labelEl) labelEl.textContent = window.LANGS?.[lang]?.label || LANGS_DATA[lang]?.label || lang;
   if(menu) menu.style.display = 'none';
+  window._currentLang = lang;
   
-  // Call the module's setLang if available
-  if(window._setLangFull) {
-    window._setLangFull(lang);
-  } else {
-    // Fallback: store and apply when ready
-    window._pendingLang = lang;
+  // Try calling full setter, retry if not ready yet
+  function tryApply() {
+    if(window._setLangFull) {
+      window._setLangFull(lang);
+    } else {
+      setTimeout(tryApply, 100);
+    }
   }
+  tryApply();
 };
 </script>
 
