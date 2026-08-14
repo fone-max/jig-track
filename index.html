@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -693,6 +692,15 @@ onSnapshot(collection(db, 'jigs'), (snapshot) => {
   document.getElementById('loading-overlay').style.display = 'none';
   setSyncStatus('offline');
 });
+
+// Fallback: don't hang forever on the loading screen if Firebase is slow/blocked
+setTimeout(() => {
+  const ov = document.getElementById('loading-overlay');
+  if (ov && getComputedStyle(ov).display !== 'none') {
+    ov.style.display = 'none';
+    setSyncStatus('offline');
+  }
+}, 12000);
 
 // Real-time listener for history
 onSnapshot(query(collection(db, 'history'), orderBy('timestamp', 'desc'), limit(100)), (snapshot) => {
