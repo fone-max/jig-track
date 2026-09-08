@@ -447,6 +447,13 @@ tr:hover td { background: #f8fffe; }
       <div class="form-group"><label class="form-label" data-i18n="location">ตำแหน่งจัดเก็บ</label><input class="form-input" id="f-loc" placeholder="เช่น Zone A / Rack 3"></div>
       <div class="form-group"><label class="form-label" data-i18n="fldQty">จำนวน (ชิ้น) *</label><input class="form-input" id="f-qty" type="number" min="1" value="1" placeholder="1"></div>
       <div class="form-group form-full"><label class="form-label" data-i18n="fldSpec">สเปก / หมายเหตุ</label><input class="form-input" id="f-spec" placeholder="ขนาด, วัสดุ, ใช้กับงานอะไร..."></div>
+      <div class="form-group form-full" style="margin-top:2px;"><label class="form-label" data-i18n="stepSection">รายละเอียดขั้นตอน (Step · EA)</label></div>
+      <div class="form-group"><label class="form-label">Step 1 (EA)</label><input class="form-input" id="f-step1" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Step 2 (EA)</label><input class="form-input" id="f-step2" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Step 3 (EA)</label><input class="form-input" id="f-step3" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Step 4 (EA)</label><input class="form-input" id="f-step4" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Step 5 (EA)</label><input class="form-input" id="f-step5" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Step 6 (EA)</label><input class="form-input" id="f-step6" type="number" min="0" placeholder="0"></div>
       <div class="form-group form-full">
         <label class="form-label" data-i18n="fldImg">รูปภาพ Jig</label>
         <div id="img-upload-area" onclick="document.getElementById('f-img').click()" style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;">
@@ -542,6 +549,13 @@ tr:hover td { background: #f8fffe; }
           <select class="form-input" id="e-status"><option value="พร้อมใช้" data-i18n="ready">พร้อมใช้</option><option value="ถูกยืม" data-i18n="borrowed">ถูกยืม</option><option value="รอซ่อม" data-i18n="repair">รอซ่อม</option><option value="เลิกใช้" data-i18n="retired">เลิกใช้</option></select>
         </div>
         <div class="form-group form-full"><label class="form-label" data-i18n="fldSpec">สเปก / หมายเหตุ</label><input class="form-input" id="e-spec"></div>
+        <div class="form-group form-full" style="margin-top:2px;"><label class="form-label" data-i18n="stepSection">รายละเอียดขั้นตอน (Step · EA)</label></div>
+        <div class="form-group"><label class="form-label">Step 1 (EA)</label><input class="form-input" id="e-step1" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Step 2 (EA)</label><input class="form-input" id="e-step2" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Step 3 (EA)</label><input class="form-input" id="e-step3" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Step 4 (EA)</label><input class="form-input" id="e-step4" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Step 5 (EA)</label><input class="form-input" id="e-step5" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Step 6 (EA)</label><input class="form-input" id="e-step6" type="number" min="0" placeholder="0"></div>
       </div>
       <div class="modal-footer">
         <button class="btn-sec" onclick="toggleEditMode()" data-i18n="btnCancel">ยกเลิก</button>
@@ -960,7 +974,7 @@ window.renderDashDate = function() {
 window.renderDashDate();
 
 window.openAddModal = function() {
-  ['f-id','f-name','f-customer','f-model','f-spec','f-loc'].forEach(x=>document.getElementById(x).value='');
+  ['f-id','f-name','f-customer','f-model','f-spec','f-loc','f-step1','f-step2','f-step3','f-step4','f-step5','f-step6'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('f-qty').value = '1';
   document.getElementById('img-preview-wrap').style.display = 'none';
   document.getElementById('img-placeholder').style.display = 'block';
@@ -977,6 +991,8 @@ window.addJig = async function() {
   setSyncStatus('syncing');
   try {
     const imgData = window._pendingImageData || '';
+    const steps = {};
+    for(let i=1;i<=6;i++){ steps['step'+i] = parseInt(document.getElementById('f-step'+i).value)||0; }
     await setDoc(doc(db, 'jigs', id), {
       id, name,
       customer: document.getElementById('f-customer').value.trim()||'',
@@ -986,6 +1002,7 @@ window.addJig = async function() {
       qty: parseInt(document.getElementById('f-qty').value)||1,
       status: 'พร้อมใช้',
       spec: document.getElementById('f-spec').value.trim()||'-',
+      ...steps,
       holder: '', imageData: imgData, createdAt: serverTimestamp()
     });
     await addDoc(collection(db, 'history'), { jigId:id, jigName:name, action:'add', actor:'ผู้ใช้ระบบ', note:'เพิ่มเข้าระบบ', timestamp:serverTimestamp() });
@@ -1088,12 +1105,16 @@ window.openDetail = function(jigId) {
   document.getElementById('md-status-text').textContent = statusLabel(j.status);
   document.getElementById('md-holder-text').textContent = j.holder ? `${t('holderPrefix')} ${j.holder}` : '';
 
+  const stepsHtml = [1,2,3,4,5,6].filter(i=>(parseInt(j['step'+i])||0)>0).map(i=>
+    `<div class="detail-row"><span class="detail-key">Step ${i}</span><span class="detail-val" style="font-family:var(--mono);font-weight:600;">${j['step'+i]} <span style="font-size:11px;color:var(--text3);font-weight:400;">EA</span></span></div>`
+  ).join('');
   document.getElementById('md-details').innerHTML = `
     <div class="detail-row"><span class="detail-key">Customer</span><span class="detail-val" style="font-weight:500;color:var(--text);">${j.customer||'—'}</span></div>
     <div class="detail-row"><span class="detail-key">${t('fldModel')}</span><span class="detail-val" style="font-family:var(--mono);color:var(--accent2);">${j.model||'—'}</span></div>
     <div class="detail-row"><span class="detail-key">${t('fldType')}</span><span class="detail-val"><span class="badge badge-blue">${j.type||'—'}</span></span></div>
     <div class="detail-row"><span class="detail-key">${t('qtyWord')}</span><span class="detail-val" style="font-weight:600;font-size:16px;font-family:var(--mono);">${j.qty||1} <span style="font-size:11px;color:var(--text3);font-weight:400;">${t('unitPcs')}</span></span></div>
-    <div class="detail-row"><span class="detail-key">${t('specWord')}</span><span class="detail-val" style="color:var(--text2);">${j.spec||'—'}</span></div>`;
+    <div class="detail-row"><span class="detail-key">${t('specWord')}</span><span class="detail-val" style="color:var(--text2);">${j.spec||'—'}</span></div>
+    ${stepsHtml}`;
 
   const qrBox = document.getElementById('md-qr');
   qrBox.innerHTML = '';
@@ -1231,6 +1252,7 @@ function _doEnterEditMode() {
   document.getElementById('e-qty').value = j.qty||1;
   document.getElementById('e-status').value = j.status||'พร้อมใช้';
   document.getElementById('e-spec').value = j.spec||'';
+  for(let i=1;i<=6;i++){ document.getElementById('e-step'+i).value = j['step'+i] || ''; }
   viewMode.style.display = 'none';
   editMode.style.display = 'block';
   btn.textContent = t('btnBack');
@@ -1251,6 +1273,8 @@ window.saveEditJig = async function() {
   if(!name) { alert('กรุณากรอกชื่อ Jig'); return; }
   setSyncStatus('syncing');
   try {
+    const steps = {};
+    for(let i=1;i<=6;i++){ steps['step'+i] = parseInt(document.getElementById('e-step'+i).value)||0; }
     await updateDoc(doc(db,'jigs',jigId), {
       name,
       customer: document.getElementById('e-customer').value.trim()||'',
@@ -1260,6 +1284,7 @@ window.saveEditJig = async function() {
       qty: parseInt(document.getElementById('e-qty').value)||1,
       status: document.getElementById('e-status').value,
       spec: document.getElementById('e-spec').value.trim()||'-',
+      ...steps,
     });
     await addDoc(collection(db,'history'), { jigId, jigName:name, action:'edit', actor:'ผู้ใช้ระบบ', note:'แก้ไขข้อมูล', timestamp:serverTimestamp() });
     closeModal('modal-detail');
@@ -1635,6 +1660,7 @@ window.LANGS = {
     checkin:'คืน', checkoutLabel:'ยืมออก', repairLog:'แจ้งซ่อม', added:'เพิ่มเข้าระบบ',
     pinPrompt:'🔒 ใส่รหัสเพื่อดำเนินการ:', pinWrong:'❌ รหัสไม่ถูกต้อง',
     connectingText:'กำลังเชื่อมต่อระบบ JigTrack...',
+    stepSection:'รายละเอียดขั้นตอน (Step · EA)',
     hsTotal:'ทั้งหมด', hsAvail:'พร้อม',
     searchPageTitle:'ค้นหา Jig', scanAim:'จ่อ QR Code ของ Jig', closeCam:'✕ ปิดกล้อง',
     jigSearchPh:'ค้นหา รหัส / ชื่อ / รุ่น...', allType:'ประเภททั้งหมด', importBtn:'📥 Import จากรายการ',
@@ -1680,6 +1706,7 @@ window.LANGS = {
     checkin:'반납', checkoutLabel:'대여', repairLog:'수리 신청', added:'등록됨',
     pinPrompt:'🔒 비밀번호를 입력하세요:', pinWrong:'❌ 비밀번호가 틀렸습니다',
     connectingText:'JigTrack 연결 중...',
+    stepSection:'단계 상세 (Step · EA)',
     hsTotal:'전체', hsAvail:'사용가능',
     searchPageTitle:'지그 검색', scanAim:'지그의 QR 코드를 비추세요', closeCam:'✕ 카메라 닫기',
     jigSearchPh:'코드 / 이름 / 모델 검색...', allType:'전체 유형', importBtn:'📥 목록에서 가져오기',
@@ -1725,6 +1752,7 @@ window.LANGS = {
     checkin:'ပြန်ပေး', checkoutLabel:'ချေးယူ', repairLog:'ပြင်ဆင်ရန်တင်', added:'မှတ်ပုံတင်',
     pinPrompt:'🔒 လျှို့ဝှက်နံပါတ် ထည့်ပါ:', pinWrong:'❌ လျှို့ဝှက်နံပါတ် မှားနေသည်',
     connectingText:'JigTrack ချိတ်ဆက်နေသည်...',
+    stepSection:'အဆင့် အသေးစိတ် (Step · EA)',
     hsTotal:'စုစုပေါင်း', hsAvail:'အသင့်',
     searchPageTitle:'Jig ရှာဖွေ', scanAim:'Jig ၏ QR ကုဒ်ကို ချိန်ပါ', closeCam:'✕ ကင်မရာ ပိတ်',
     jigSearchPh:'ကုဒ် / အမည် / မော်ဒယ် ရှာ...', allType:'အမျိုးအစား အားလုံး', importBtn:'📥 စာရင်းမှ တင်သွင်း',
@@ -1770,6 +1798,7 @@ window.LANGS = {
     checkin:'Return', checkoutLabel:'Borrow', repairLog:'Report Repair', added:'Added',
     pinPrompt:'🔒 Enter PIN to continue:', pinWrong:'❌ Incorrect PIN',
     connectingText:'Connecting to JigTrack...',
+    stepSection:'Step details (EA)',
     hsTotal:'Total', hsAvail:'Ready',
     searchPageTitle:'Search Jig', scanAim:'Aim at the Jig QR Code', closeCam:'✕ Close Camera',
     jigSearchPh:'Search code / name / model...', allType:'All Types', importBtn:'📥 Import from List',
